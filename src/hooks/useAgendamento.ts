@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { postAgendamento } from '../services/agendamentoService';
-import type { AgendamentoFormData } from '../types/agendamento';
+import { postAgendamento } from '../services/formularioAgendamentoService';
+import type { AgendamentoFormData, AgendamentoResponse } from '../types/agendamento';
 
-export const useAgendamento = () => {
+interface UseAgendamentoOptions {
+  onSuccess?: (data: AgendamentoResponse) => void;
+}
+
+export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
   const [formData, setFormData] = useState<AgendamentoFormData>({
     fullName: '',
     dateOfBirth: null,
@@ -11,7 +15,6 @@ export const useAgendamento = () => {
     time: '',
   });
 
-  // Estado de loading exigido pelas regras de execução do desafio
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -25,8 +28,6 @@ export const useAgendamento = () => {
 
   const handleTimeChange = (date: Date | null) => {
     if (date) {
-      // Ajustado para HH:mm (formato 24h, ex: 15:00) 
-      // Isso evita que o TimeSpan.Parse do C# quebre ao tentar ler "PM/AM"
       setFormData((prev) => ({ ...prev, time: format(date, 'HH:mm') }));
     } else {
       setFormData((prev) => ({ ...prev, time: '' }));
@@ -42,10 +43,8 @@ export const useAgendamento = () => {
     }
 
     try {
-      // 1. Ativa o estado de carregamento
       setIsLoading(true);
 
-      // 2. O "Tradutor": Mapeia o estado do React (inglês) para o DTO do C# (português)
       const payloadParaAPI = {
         nome: formData.fullName,
         dataNascimento: format(formData.dateOfBirth, 'yyyy-MM-dd'),
@@ -55,13 +54,21 @@ export const useAgendamento = () => {
 
       console.log('Enviando payload para a API:', payloadParaAPI);
 
-      // 3. A Chamada Real usando o serviço do Axios
       const response = await postAgendamento(payloadParaAPI);
 
       console.log('Resposta do Servidor:', response.data);
       alert('Agendamento enviado ao servidor com sucesso!');
 
-      // 4. Limpa o formulário após o sucesso
+      if (onSuccess) {
+        onSuccess({
+          id: Math.random().toString(),
+          nomePaciente: formData.fullName,
+          dataAgendamento: format(formData.appointmentDate, 'MM/dd/yyyy'),
+          horaAgendamento: formData.time,
+          status: 'Confirmed',
+        });
+      }
+
       setFormData({
         fullName: '',
         dateOfBirth: null,
@@ -73,14 +80,13 @@ export const useAgendamento = () => {
       console.error('Erro ao conectar com a API:', error);
       alert('Ocorreu um erro na comunicação com o servidor.');
     } finally {
-      // 5. Independente de dar sucesso ou erro, desliga o loading
       setIsLoading(false);
     }
   };
 
   return {
     formData,
-    isLoading, // Exportando para você usar no botão "Confirmar"
+    isLoading,
     handleChange,
     handleDateChange,
     handleTimeChange,

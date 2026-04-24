@@ -6,9 +6,14 @@ import { TimePicker } from './ui/TimePicker';
 import { Button } from './ui/Button';
 import { Syringe, ShieldCheck } from 'lucide-react';
 import { parse } from 'date-fns';
+import type { AgendamentoResponse } from '../types/agendamento';
 
-export const FormularioAgendamento: React.FC = () => {
-  const { formData, handleChange, handleDateChange, handleTimeChange, handleSubmit } = useAgendamento();
+interface FormularioProps {
+  onSuccess?: (data: AgendamentoResponse) => void;
+}
+
+export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) => {
+  const { formData, handleChange, handleDateChange, handleTimeChange, handleSubmit } = useAgendamento({ onSuccess });
 
   const selectedTime = useMemo(() => {
     if (!formData.time) return null;
