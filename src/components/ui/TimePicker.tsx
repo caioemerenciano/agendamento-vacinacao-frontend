@@ -28,7 +28,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           showTimeSelectOnly
           timeIntervals={15}
           timeCaption="Time"
-          dateFormat="hh:mm aa"
+          dateFormat="HH:mm"
           placeholderText={placeholderText}
           className="w-full px-3 py-2 border border-slate-200 rounded-lg shadow-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 sm:text-sm bg-white"
         />
