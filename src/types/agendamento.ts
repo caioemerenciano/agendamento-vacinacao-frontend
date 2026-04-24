@@ -11,3 +11,11 @@ export interface AgendamentoPayload {
   appointmentDate: string; // 'yyyy-MM-dd'
   time: string;
 }
+
+export interface AgendamentoResponse {
+  id: string | number;
+  nomePaciente: string;
+  dataAgendamento: string;
+  horaAgendamento: string;
+  status: 'Confirmed' | 'Pending' | 'Canceled';
+}
