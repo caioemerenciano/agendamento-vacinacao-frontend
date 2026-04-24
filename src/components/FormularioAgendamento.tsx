@@ -7,12 +7,12 @@ import { Button } from './ui/Button';
 import { Syringe, ShieldCheck } from 'lucide-react';
 import { parse } from 'date-fns';
 
-export const VaccineForm: React.FC = () => {
+export const FormularioAgendamento: React.FC = () => {
   const { formData, handleChange, handleDateChange, handleTimeChange, handleSubmit } = useAgendamento();
 
   const selectedTime = useMemo(() => {
     if (!formData.time) return null;
-    return parse(formData.time, 'hh:mm aa', new Date());
+    return parse(formData.time, 'HH:mm', new Date());
   }, [formData.time]);
 
   return (
@@ -31,7 +31,7 @@ export const VaccineForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-5">
         <Input
           label="Nome Completo"
-          name="nomeCompleto"
+          name="fullName"
           placeholder="Preencha com o nome completo"
           value={formData.fullName}
           onChange={handleChange}

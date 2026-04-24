@@ -1,6 +1,9 @@
 import React from 'react';
-import ReactDatePicker from 'react-datepicker';
+import ReactDatePicker, { registerLocale } from 'react-datepicker';
 import { Calendar } from 'lucide-react';
+import { ptBR } from 'date-fns/locale/pt-BR';
+
+registerLocale('pt-BR', ptBR);
 
 interface DatePickerProps {
   label: string;
@@ -25,6 +28,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           selected={selected}
           onChange={onChange}
           dateFormat="dd/MM/yyyy"
+          locale="pt-BR"
           placeholderText={placeholderText}
           className="w-full px-3 py-2 border border-slate-200 rounded-lg shadow-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 sm:text-sm bg-white"
         />
