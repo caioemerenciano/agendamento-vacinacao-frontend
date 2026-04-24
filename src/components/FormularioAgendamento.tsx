@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAgendamento } from '../hooks/useAgendamento';
+import { useNavigate } from 'react-router-dom';
 import { Input } from './ui/Input';
 import { DatePicker } from './ui/DatePicker';
 import { TimePicker } from './ui/TimePicker';
@@ -13,7 +14,14 @@ interface FormularioProps {
 }
 
 export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) => {
-  const { formData, handleChange, handleDateChange, handleTimeChange, handleSubmit } = useAgendamento({ onSuccess });
+  const navigate = useNavigate();
+  
+  const { formData, handleChange, handleDateChange, handleTimeChange, handleSubmit } = useAgendamento({ 
+    onSuccess: (data) => {
+      if (onSuccess) onSuccess(data);
+      navigate('/listagem');
+    }
+  });
 
   const selectedTime = useMemo(() => {
     if (!formData.time) return null;
