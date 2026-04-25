@@ -1,157 +1,145 @@
-import { useState, useEffect } from 'react';
-import { Search, Calendar, Clock, MoreVertical, ChevronLeft, ChevronRight, User } from 'lucide-react';
-import { Badge } from './ui/Badge';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Bell } from 'lucide-react';
+// Lembre-se de garantir que o updateStatusAgendamento esteja exportado no seu service!
+import { getAgendamentos, updateStatusAgendamento } from '../services/listagemAgendamentoService';
 import type { AgendamentoResponse } from '../types/agendamento';
-import { getAgendamentos } from '../services/listagemAgendamentoService';
-import { useNavigate } from 'react-router-dom';
 
-interface ListagemProps {
-  appointments?: AgendamentoResponse[];
-}
-
-export const ListagemAgendamentos: React.FC<ListagemProps> = ({ appointments: propsAppointments }) => {
-  const [appointments, setAppointments] = useState<AgendamentoResponse[]>(propsAppointments || []);
-  const [isLoading, setIsLoading] = useState(!propsAppointments);
-  const navigate = useNavigate();
+export const ListagemAgendamentos = () => {
+  const [appointments, setAppointments] = useState<AgendamentoResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (propsAppointments) return;
-
-    const fetchAgendamentos = async () => {
+    const carregarDados = async () => {
       try {
-        setIsLoading(true);
-        const data = await getAgendamentos();
-        setAppointments(data);
-      } catch (error) {
-        console.error('Erro ao buscar agendamentos:', error);
+        setLoading(true);
+        const dados = await getAgendamentos();
+        setAppointments(dados);
+      } catch (err) {
+        console.error("Erro ao buscar agendamentos:", err);
+        setError(true);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
-    fetchAgendamentos();
-  }, [propsAppointments]);
+    carregarDados();
+  }, []);
+
+  // Função central que lida com a mudança no banco e na tela
+  const handleStatusChange = async (id: number, novoStatusTexto: string) => {
+    const statusMap: Record<string, number> = {
+      'Agendado': 1,
+      'Realizado': 2,
+      'Cancelado': 3
+    };
+
+    try {
+      // 1. Envia para a API C#
+      await updateStatusAgendamento(id, statusMap[novoStatusTexto]);
+
+      // 2. Atualiza a tela (Estado do React) instantaneamente se a API der sucesso
+      setAppointments(prev => prev.map(app =>
+        app.id === id ? { ...app, status: statusMap[novoStatusTexto] } : app
+      ));
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      alert("Não foi possível atualizar o status no banco de dados.");
+    }
+  };
+
+  const getStatusText = (status: number | string) => {
+    switch (String(status)) {
+      case '1': return 'Agendado';
+      case '2': return 'Realizado';
+      case '3': return 'Cancelado';
+      default: return String(status);
+    }
+  };
+
+  // Função extra de UI/UX para colorir as pílulas de status
+  const getStatusStyle = (status: number | string) => {
+    const textStatus = getStatusText(status);
+    switch (textStatus) {
+      case 'Realizado': return 'bg-green-100 text-green-700';
+      case 'Cancelado': return 'bg-red-100 text-red-700';
+      default: return 'bg-blue-100 text-blue-700'; // Agendado
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center text-slate-600">Carregando agendamentos do banco...</div>;
+  if (error) return <div className="p-8 text-center text-red-500">Erro ao conectar com a API. Verifique se o backend está rodando.</div>;
 
   return (
-    <div className="w-full min-h-screen bg-[#f1f5f9] font-sans flex flex-col items-center">
-      {/* Header */}
-      <header className="w-full bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+    <div className="w-full max-w-5xl mt-12 bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
+      <div className="p-6 border-b border-slate-100 flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-slate-800">WebApi Admin</h1>
+          <h2 className="text-xl font-bold text-slate-800">Agendamentos Realizados</h2>
+          <div className="relative flex items-center justify-center p-2 rounded-full hover:bg-slate-100 transition-colors">
+            <Bell className="w-5 h-5 text-slate-600" />
+            {appointments.length > 0 && (
+              <span className="absolute top-0 right-0 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white">
+                {appointments.length}
+              </span>
+            )}
+          </div>
         </div>
-        <button
-          onClick={() => navigate('/')}
-          className="bg-sky-600 text-white px-4 py-2 text-sm font-semibold rounded-lg shadow hover:bg-sky-700 transition-colors"
+        <Link
+          to="/"
+          className="bg-blue-600 px-4 py-2 text-sm font-semibold text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           Novo Agendamento
-        </button>
-      </header>
+        </Link>
+      </div>
 
-      {/* Main Content */}
-      <main className="w-full max-w-6xl mt-10 px-6">
-        {/* Page Title & Search */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800">Consultas agendadas</h2>
-            <p className="text-slate-500 mt-1">Gerenciar e revisar todos os agendamentos de vacinação contra COVID-19.</p>
-          </div>
-          <div className="relative w-full md:w-72">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <Search size={18} />
-            </div>
-            <input
-              type="text"
-              placeholder="Search patients..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg shadow-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 placeholder-slate-400 text-slate-900 bg-white"
-            />
-          </div>
-        </div>
-
-        {/* Data Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[400px]">
-          {isLoading ? (
-            <div className="w-full h-[400px] flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600"></div>
-            </div>
-          ) : appointments.length === 0 ? (
-            <div className="w-full h-[400px] flex flex-col items-center justify-center text-slate-400">
-              <p className="text-lg font-medium">Nenhum agendamento encontrado.</p>
-              <button
-                onClick={() => navigate('/')}
-                className="mt-4 text-sky-600 hover:underline text-sm"
-              >
-                Criar primeiro agendamento
-              </button>
-            </div>
+      <table className="w-full text-left">
+        <thead className="bg-slate-50 text-slate-500 text-sm uppercase">
+          <tr>
+            <th className="px-6 py-4 font-semibold">Paciente</th>
+            <th className="px-6 py-4 font-semibold">Data</th>
+            <th className="px-6 py-4 font-semibold">Horário</th>
+            <th className="px-6 py-4 font-semibold">Status</th>
+            <th className="px-6 py-4 font-semibold text-center">Ações</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {appointments.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="px-6 py-8 text-center text-slate-400">Nenhum agendamento encontrado no banco de dados.</td>
+            </tr>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 text-xs text-slate-500 font-semibold tracking-wider">
-                    <th className="px-6 py-4 uppercase">Patient Name</th>
-                    <th className="px-6 py-4 uppercase">Scheduled Date</th>
-                    <th className="px-6 py-4 uppercase">Time</th>
-                    <th className="px-6 py-4 uppercase">Status</th>
-                    <th className="px-6 py-4 uppercase text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {appointments.map((apt) => (
-                    <tr key={apt.id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center text-sky-500">
-                            <User size={16} />
-                          </div>
-                          <span className="font-semibold text-slate-800">{apt.nomePaciente}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-500">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={16} className="text-slate-400" />
-                          <span>{apt.dataAgendamento}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-500">
-                        <div className="flex items-center gap-2">
-                          <Clock size={16} className="text-slate-400" />
-                          <span>{apt.horaAgendamento}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge status={apt.status} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-md hover:bg-slate-100">
-                          <MoreVertical size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+            appointments.map((app) => (
+              <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-4 font-medium text-slate-700">{app.nomePaciente}</td>
+                <td className="px-6 py-4 text-slate-600">{app.dataAgendamento?.split('T')[0]}</td>
+                <td className="px-6 py-4 text-slate-600">{app.horaAgendamento}</td>
 
-          {/* Pagination */}
-          {!isLoading && appointments.length > 0 && (
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white text-sm">
-              <span className="text-slate-500">Showing {appointments.length} results</span>
-              <div className="flex items-center gap-1">
-                <button className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 rounded-md text-slate-600 font-medium hover:bg-slate-50 transition-colors">
-                  <ChevronLeft size={16} /> Previous
-                </button>
-                <button className="w-8 h-8 flex items-center justify-center rounded-md bg-sky-600 text-white font-medium shadow-sm">
-                  1
-                </button>
-                <button className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 rounded-md text-slate-600 font-medium hover:bg-slate-50 transition-colors">
-                  Next <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
+                {/* Coluna de Status com cor dinâmica */}
+                <td className="px-6 py-4">
+                  <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusStyle(app.status)}`}>
+                    {getStatusText(app.status)}
+                  </span>
+                </td>
+
+                {/* Coluna de Ações com o Select */}
+                <td className="px-6 py-4 text-center">
+                  <select
+                    value={getStatusText(app.status)}
+                    onChange={(e) => handleStatusChange(app.id, e.target.value)}
+                    className="text-sm font-medium border border-slate-300 rounded-md p-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm"
+                  >
+                    <option value="Agendado">Agendado</option>
+                    <option value="Realizado">Realizado</option>
+                    <option value="Cancelado">Cancelado</option>
+                  </select>
+                </td>
+
+              </tr>
+            ))
           )}
-        </div>
-      </main>
+        </tbody>
+      </table>
     </div>
   );
 };
