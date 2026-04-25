@@ -7,7 +7,15 @@ export interface AgendamentoFormData {
 
 export interface AgendamentoPayload {
   fullName: string;
-  dateOfBirth: string; // 'yyyy-MM-dd'
-  appointmentDate: string; // 'yyyy-MM-dd'
+  dateOfBirth: string;
+  appointmentDate: string;
   time: string;
+}
+
+export interface AgendamentoResponse {
+  id: number;
+  nomePaciente: string;
+  dataAgendamento: string;
+  horaAgendamento: string;
+  status: 1 | 2 | 3 | 'Agendado' | 'Realizado' | 'Cancelado' | string | number;
 }

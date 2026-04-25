@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { postAgendamento } from '../services/agendamentoService';
-import type { AgendamentoFormData } from '../types/agendamento';
+import { postAgendamento } from '../services/formularioAgendamentoService';
+import type { AgendamentoFormData, AgendamentoResponse } from '../types/agendamento';
+import { isAxiosError } from 'axios';
 
-export const useAgendamento = () => {
+interface UseAgendamentoOptions {
+  onSuccess?: (data: AgendamentoResponse) => void;
+}
+
+export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
   const [formData, setFormData] = useState<AgendamentoFormData>({
     fullName: '',
     dateOfBirth: null,
@@ -11,7 +16,6 @@ export const useAgendamento = () => {
     time: '',
   });
 
-  // Estado de loading exigido pelas regras de execução do desafio
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -25,15 +29,13 @@ export const useAgendamento = () => {
 
   const handleTimeChange = (date: Date | null) => {
     if (date) {
-      // Ajustado para HH:mm (formato 24h, ex: 15:00) 
-      // Isso evita que o TimeSpan.Parse do C# quebre ao tentar ler "PM/AM"
       setFormData((prev) => ({ ...prev, time: format(date, 'HH:mm') }));
     } else {
       setFormData((prev) => ({ ...prev, time: '' }));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     if (!formData.fullName || !formData.dateOfBirth || !formData.appointmentDate || !formData.time) {
@@ -42,10 +44,8 @@ export const useAgendamento = () => {
     }
 
     try {
-      // 1. Ativa o estado de carregamento
       setIsLoading(true);
 
-      // 2. O "Tradutor": Mapeia o estado do React (inglês) para o DTO do C# (português)
       const payloadParaAPI = {
         nome: formData.fullName,
         dataNascimento: format(formData.dateOfBirth, 'yyyy-MM-dd'),
@@ -55,13 +55,16 @@ export const useAgendamento = () => {
 
       console.log('Enviando payload para a API:', payloadParaAPI);
 
-      // 3. A Chamada Real usando o serviço do Axios
       const response = await postAgendamento(payloadParaAPI);
 
-      console.log('Resposta do Servidor:', response.data);
-      alert('Agendamento enviado ao servidor com sucesso!');
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // 4. Limpa o formulário após o sucesso
+      console.log('Resposta do Servidor:', response.data);
+
+      if (onSuccess) {
+        onSuccess(response.data);
+      }
+
       setFormData({
         fullName: '',
         dateOfBirth: null,
@@ -71,16 +74,51 @@ export const useAgendamento = () => {
 
     } catch (error) {
       console.error('Erro ao conectar com a API:', error);
-      alert('Ocorreu um erro na comunicação com o servidor.');
+
+      if (isAxiosError(error) && error.response?.data) {
+        const respostaDaApi = error.response.data;
+
+        console.log('debug testando:', respostaDaApi);
+
+        if (typeof respostaDaApi === 'string' && respostaDaApi.includes('Exception:')) {
+          const primeiraLinha = respostaDaApi.split('\n')[0];
+          const mensagemLimpa = primeiraLinha.split('Exception:')[1]?.trim() || 'Erro de regra de negócio no servidor.';
+          alert(`Atenção: ${mensagemLimpa}`);
+        }
+        else if (Array.isArray(respostaDaApi) && respostaDaApi.length > 0) {
+          const errosTexto = respostaDaApi.map((e: any) => e.errorMessage || e.ErrorMessage || 'Dado inválido.').join('\n');
+          alert(`Atenção:\n${errosTexto}`);
+        }
+        else if (respostaDaApi.mensagem) {
+          alert(`Atenção: ${respostaDaApi.mensagem}`);
+        }
+        else if (respostaDaApi.errors) {
+          const listaDeErros = Object.values(respostaDaApi.errors).flat();
+
+          if (listaDeErros.length > 0) {
+            alert(`Atenção: ${String(listaDeErros[0])}`);
+          } else {
+            alert('Verifique se todos os campos foram preenchidos corretamente.');
+          }
+        }
+        else if (respostaDaApi.title) {
+          alert(`Atenção: ${respostaDaApi.title}`);
+        }
+        else {
+          alert('Dados inválidos. Não foi possível realizar o agendamento.');
+        }
+      } else {
+        alert('Ocorreu um erro de conexão com o servidor. Tente novamente mais tarde.');
+      }
+
     } finally {
-      // 5. Independente de dar sucesso ou erro, desliga o loading
       setIsLoading(false);
     }
   };
 
   return {
     formData,
-    isLoading, // Exportando para você usar no botão "Confirmar"
+    isLoading,
     handleChange,
     handleDateChange,
     handleTimeChange,
