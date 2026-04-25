@@ -5,8 +5,8 @@ import { Input } from './ui/Input';
 import { DatePicker } from './ui/DatePicker';
 import { TimePicker } from './ui/TimePicker';
 import { Button } from './ui/Button';
-import { Syringe, ShieldCheck } from 'lucide-react';
-import { parse } from 'date-fns';
+import { Syringe, ShieldCheck, Loader2 } from 'lucide-react';
+import { parse, isToday, startOfDay, endOfDay } from 'date-fns';
 import type { AgendamentoResponse } from '../types/agendamento';
 
 interface FormularioProps {
@@ -15,8 +15,8 @@ interface FormularioProps {
 
 export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
-  
-  const { formData, handleChange, handleDateChange, handleTimeChange, handleSubmit } = useAgendamento({ 
+
+  const { formData, isLoading, handleChange, handleDateChange, handleTimeChange, handleSubmit } = useAgendamento({
     onSuccess: (data) => {
       if (onSuccess) onSuccess(data);
       navigate('/listagem');
@@ -27,6 +27,16 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
     if (!formData.time) return null;
     return parse(formData.time, 'HH:mm', new Date());
   }, [formData.time]);
+
+  const isAppointmentToday = formData.appointmentDate
+    ? isToday(formData.appointmentDate)
+    : false;
+
+  const minTimeForPicker = isAppointmentToday
+    ? new Date()
+    : startOfDay(new Date());
+
+  const maxTimeForPicker = endOfDay(new Date());
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-100 px-8 py-10 w-full max-w-md mx-auto">
@@ -62,23 +72,35 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
             label="Data da consulta"
             selected={formData.appointmentDate}
             onChange={(date) => handleDateChange('appointmentDate', date)}
+            minDate={new Date()}
             className="flex-1"
           />
           <TimePicker
             label="Horário da consulta"
             selected={selectedTime}
             onChange={(date) => handleTimeChange(date)}
+            minTime={minTimeForPicker}
+            maxTime={maxTimeForPicker}
             className="flex-1"
           />
         </div>
 
         <div className="pt-2">
-          <Button type="submit">Confirmar agendamento</Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Agendando...
+              </span>
+            ) : (
+              'Confirmar agendamento'
+            )}
+          </Button>
         </div>
 
         <div className="flex items-center justify-center gap-1.5 mt-4 text-slate-400">
           <ShieldCheck className="w-4 h-4" />
-          <span className="text-xs font-medium">Your data is securely encrypted</span>
+          <span className="text-xs font-medium">Seus dados estão protegidos</span>
         </div>
       </form>
     </div>

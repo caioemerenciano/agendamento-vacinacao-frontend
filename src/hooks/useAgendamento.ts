@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { postAgendamento } from '../services/formularioAgendamentoService';
 import type { AgendamentoFormData, AgendamentoResponse } from '../types/agendamento';
+import { isAxiosError } from 'axios';
 
 interface UseAgendamentoOptions {
   onSuccess?: (data: AgendamentoResponse) => void;
@@ -34,7 +35,7 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     if (!formData.fullName || !formData.dateOfBirth || !formData.appointmentDate || !formData.time) {
@@ -56,17 +57,12 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
 
       const response = await postAgendamento(payloadParaAPI);
 
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       console.log('Resposta do Servidor:', response.data);
-      alert('Agendamento enviado ao servidor com sucesso!');
 
       if (onSuccess) {
-        onSuccess({
-          id: Math.random().toString(),
-          nomePaciente: formData.fullName,
-          dataAgendamento: format(formData.appointmentDate, 'MM/dd/yyyy'),
-          horaAgendamento: formData.time,
-          status: 'Confirmed',
-        });
+        onSuccess(response.data);
       }
 
       setFormData({
@@ -78,7 +74,43 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
 
     } catch (error) {
       console.error('Erro ao conectar com a API:', error);
-      alert('Ocorreu um erro na comunicação com o servidor.');
+
+      if (isAxiosError(error) && error.response?.data) {
+        const respostaDaApi = error.response.data;
+
+        console.log('debug testando:', respostaDaApi);
+
+        if (typeof respostaDaApi === 'string' && respostaDaApi.includes('Exception:')) {
+          const primeiraLinha = respostaDaApi.split('\n')[0];
+          const mensagemLimpa = primeiraLinha.split('Exception:')[1]?.trim() || 'Erro de regra de negócio no servidor.';
+          alert(`Atenção: ${mensagemLimpa}`);
+        }
+        else if (Array.isArray(respostaDaApi) && respostaDaApi.length > 0) {
+          const errosTexto = respostaDaApi.map((e: any) => e.errorMessage || e.ErrorMessage || 'Dado inválido.').join('\n');
+          alert(`Atenção:\n${errosTexto}`);
+        }
+        else if (respostaDaApi.mensagem) {
+          alert(`Atenção: ${respostaDaApi.mensagem}`);
+        }
+        else if (respostaDaApi.errors) {
+          const listaDeErros = Object.values(respostaDaApi.errors).flat();
+
+          if (listaDeErros.length > 0) {
+            alert(`Atenção: ${String(listaDeErros[0])}`);
+          } else {
+            alert('Verifique se todos os campos foram preenchidos corretamente.');
+          }
+        }
+        else if (respostaDaApi.title) {
+          alert(`Atenção: ${respostaDaApi.title}`);
+        }
+        else {
+          alert('Dados inválidos. Não foi possível realizar o agendamento.');
+        }
+      } else {
+        alert('Ocorreu um erro de conexão com o servidor. Tente novamente mais tarde.');
+      }
+
     } finally {
       setIsLoading(false);
     }
