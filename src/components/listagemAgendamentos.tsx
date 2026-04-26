@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell } from 'lucide-react';
-// Lembre-se de garantir que o updateStatusAgendamento esteja exportado no seu service!
 import { getAgendamentos, updateStatusAgendamento } from '../services/listagemAgendamentoService';
 import type { AgendamentoResponse } from '../types/agendamento';
 
@@ -27,7 +26,6 @@ export const ListagemAgendamentos = () => {
     carregarDados();
   }, []);
 
-  // Função central que lida com a mudança no banco e na tela
   const handleStatusChange = async (id: number, novoStatusTexto: string) => {
     const statusMap: Record<string, number> = {
       'Agendado': 1,
@@ -36,10 +34,8 @@ export const ListagemAgendamentos = () => {
     };
 
     try {
-      // 1. Envia para a API C#
       await updateStatusAgendamento(id, statusMap[novoStatusTexto]);
 
-      // 2. Atualiza a tela (Estado do React) instantaneamente se a API der sucesso
       setAppointments(prev => prev.map(app =>
         app.id === id ? { ...app, status: statusMap[novoStatusTexto] } : app
       ));
@@ -58,17 +54,17 @@ export const ListagemAgendamentos = () => {
     }
   };
 
-  // Função extra de UI/UX para colorir as pílulas de status
   const getStatusStyle = (status: number | string) => {
     const textStatus = getStatusText(status);
     switch (textStatus) {
       case 'Realizado': return 'bg-green-100 text-green-700';
       case 'Cancelado': return 'bg-red-100 text-red-700';
-      default: return 'bg-blue-100 text-blue-700'; // Agendado
+      default: return 'bg-blue-100 text-blue-700';
     }
   };
 
   if (loading) return <div className="p-8 text-center text-slate-600">Carregando agendamentos do banco...</div>;
+
   if (error) return <div className="p-8 text-center text-red-500">Erro ao conectar com a API. Verifique se o backend está rodando.</div>;
 
   return (
@@ -86,7 +82,7 @@ export const ListagemAgendamentos = () => {
           </div>
         </div>
         <Link
-          to="/"
+          to="/agendamento"
           className="bg-blue-600 px-4 py-2 text-sm font-semibold text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           Novo Agendamento
@@ -113,16 +109,16 @@ export const ListagemAgendamentos = () => {
               <tr key={app.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4 font-medium text-slate-700">{app.nomePaciente}</td>
                 <td className="px-6 py-4 text-slate-600">{app.dataAgendamento?.split('T')[0]}</td>
-                <td className="px-6 py-4 text-slate-600">{app.horaAgendamento}</td>
+                <td className="px-6 py-4 text-slate-600">
+                  {app.horaAgendamento?.split(':').slice(0, 2).join(':')}
+                </td>
 
-                {/* Coluna de Status com cor dinâmica */}
                 <td className="px-6 py-4">
                   <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusStyle(app.status)}`}>
                     {getStatusText(app.status)}
                   </span>
                 </td>
 
-                {/* Coluna de Ações com o Select */}
                 <td className="px-6 py-4 text-center">
                   <select
                     value={getStatusText(app.status)}

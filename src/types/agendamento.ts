@@ -1,15 +1,15 @@
 export interface AgendamentoFormData {
-  fullName: string;
-  dateOfBirth: Date | null;
-  appointmentDate: Date | null;
-  time: string;
+  nomeCompleto: string;
+  dataNascimento: Date | null;
+  dataAgendamento: Date | null;
+  horario: string;
 }
 
 export interface AgendamentoPayload {
-  fullName: string;
-  dateOfBirth: string;
-  appointmentDate: string;
-  time: string;
+  nome: string;
+  dataNascimento: string;
+  dataAgendamento: string;
+  horario: string;
 }
 
 export interface AgendamentoResponse {

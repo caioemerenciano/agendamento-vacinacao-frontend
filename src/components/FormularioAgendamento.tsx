@@ -6,7 +6,7 @@ import { DatePicker } from './ui/DatePicker';
 import { TimePicker } from './ui/TimePicker';
 import { Button } from './ui/Button';
 import { Syringe, ShieldCheck, Loader2 } from 'lucide-react';
-import { parse, isToday, startOfDay, endOfDay } from 'date-fns';
+import { parse, isToday, setHours, setMinutes } from 'date-fns';
 import type { AgendamentoResponse } from '../types/agendamento';
 
 interface FormularioProps {
@@ -23,24 +23,39 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
     }
   });
 
-  const selectedTime = useMemo(() => {
-    if (!formData.time) return null;
-    return parse(formData.time, 'HH:mm', new Date());
-  }, [formData.time]);
+  const horarioSelecionado = useMemo(() => {
+    if (!formData.horario) return null;
+    return parse(formData.horario, 'HH:mm', new Date());
+  }, [formData.horario]);
 
-  const isAppointmentToday = formData.appointmentDate
-    ? isToday(formData.appointmentDate)
+  const agendamentoHoje = formData.dataAgendamento
+    ? isToday(formData.dataAgendamento)
     : false;
 
-  const minTimeForPicker = isAppointmentToday
-    ? new Date()
-    : startOfDay(new Date());
+  const horarioMinimo = useMemo(() => {
+    const inicio = setHours(setMinutes(new Date(), 0), 8); // 08:00
+    if (agendamentoHoje) {
+      const agora = new Date();
+      return agora > inicio ? agora : inicio;
+    }
+    return inicio;
+  }, [agendamentoHoje]);
 
-  const maxTimeForPicker = endOfDay(new Date());
+  const horarioMaximo = useMemo(() => {
+    return setHours(setMinutes(new Date(), 0), 17); // 17:00
+  }, []);
+
+  const nomeValido = useMemo(() => {
+    const trimmed = formData.nomeCompleto.trim();
+    return trimmed.split(/\s+/).length >= 2;
+  }, [formData.nomeCompleto]);
+
+  const dataNascimentoValida = !!formData.dataNascimento;
+  const dataAgendamentoValida = !!formData.dataAgendamento;
+  const horarioValido = !!formData.horario;
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-100 px-8 py-10 w-full max-w-md mx-auto">
-
       <div className="flex flex-col items-center mb-6">
         <div className="bg-sky-100 p-3 rounded-full mb-4">
           <Syringe className="text-[#0284c7] w-6 h-6" />
@@ -53,35 +68,39 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <Input
-          label="Nome Completo"
-          name="fullName"
+          label="Nome do paciente"
+          name="nomeCompleto"
           placeholder="Preencha com o nome completo"
-          value={formData.fullName}
+          value={formData.nomeCompleto}
           onChange={handleChange}
-          required
+          required={!nomeValido}
         />
 
         <DatePicker
           label="Data de aniversário"
-          selected={formData.dateOfBirth}
-          onChange={(date) => handleDateChange('dateOfBirth', date)}
+          selected={formData.dataNascimento}
+          onChange={(date) => handleDateChange('dataNascimento', date)}
+          maxDate={new Date()}
+          required={!dataNascimentoValida}
         />
 
         <div className="flex flex-row gap-4">
           <DatePicker
             label="Data da consulta"
-            selected={formData.appointmentDate}
-            onChange={(date) => handleDateChange('appointmentDate', date)}
+            selected={formData.dataAgendamento}
+            onChange={(date) => handleDateChange('dataAgendamento', date)}
             minDate={new Date()}
             className="flex-1"
+            required={!dataAgendamentoValida}
           />
           <TimePicker
             label="Horário da consulta"
-            selected={selectedTime}
+            selected={horarioSelecionado}
             onChange={(date) => handleTimeChange(date)}
-            minTime={minTimeForPicker}
-            maxTime={maxTimeForPicker}
+            minTime={horarioMinimo}
+            maxTime={horarioMaximo}
             className="flex-1"
+            required={!horarioValido}
           />
         </div>
 

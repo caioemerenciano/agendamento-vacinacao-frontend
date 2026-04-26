@@ -10,10 +10,10 @@ interface UseAgendamentoOptions {
 
 export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
   const [formData, setFormData] = useState<AgendamentoFormData>({
-    fullName: '',
-    dateOfBirth: null,
-    appointmentDate: null,
-    time: '',
+    nomeCompleto: '',
+    dataNascimento: null,
+    dataAgendamento: null,
+    horario: '',
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -24,22 +24,36 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
   };
 
   const handleDateChange = (name: keyof AgendamentoFormData, date: Date | null) => {
+    if (name === 'dataNascimento' && date && date > new Date()) {
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: date }));
   };
 
   const handleTimeChange = (date: Date | null) => {
     if (date) {
-      setFormData((prev) => ({ ...prev, time: format(date, 'HH:mm') }));
+      const snappedDate = new Date(date);
+      snappedDate.setMinutes(0);
+      snappedDate.setSeconds(0);
+      setFormData((prev) => ({ ...prev, horario: format(snappedDate, 'HH:mm') }));
     } else {
-      setFormData((prev) => ({ ...prev, time: '' }));
+      setFormData((prev) => ({ ...prev, horario: '' }));
     }
   };
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
-    if (!formData.fullName || !formData.dateOfBirth || !formData.appointmentDate || !formData.time) {
-      alert('Por favor, preencha todos os campos.');
+    const nomeTrimmed = formData.nomeCompleto.trim();
+    const partesDoNome = nomeTrimmed.split(/\s+/);
+
+    if (!nomeTrimmed || !formData.dataNascimento || !formData.dataAgendamento || !formData.horario) {
+      alert('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    if (partesDoNome.length < 2) {
+      alert('Por favor, digite seu nome completo (nome e sobrenome).');
       return;
     }
 
@@ -47,10 +61,10 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
       setIsLoading(true);
 
       const payloadParaAPI = {
-        nome: formData.fullName,
-        dataNascimento: format(formData.dateOfBirth, 'yyyy-MM-dd'),
-        dataAgendamento: format(formData.appointmentDate, 'yyyy-MM-dd'),
-        horario: formData.time,
+        nome: formData.nomeCompleto,
+        dataNascimento: format(formData.dataNascimento, 'yyyy-MM-dd'),
+        dataAgendamento: format(formData.dataAgendamento, 'yyyy-MM-dd'),
+        horario: `${formData.horario}:00`,
       };
 
       console.log('Enviando payload para a API:', payloadParaAPI);
@@ -66,10 +80,10 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
       }
 
       setFormData({
-        fullName: '',
-        dateOfBirth: null,
-        appointmentDate: null,
-        time: '',
+        nomeCompleto: '',
+        dataNascimento: null,
+        dataAgendamento: null,
+        horario: '',
       });
 
     } catch (error) {
