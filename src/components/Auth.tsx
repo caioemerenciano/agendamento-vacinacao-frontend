@@ -18,9 +18,14 @@ export const Auth: React.FC = () => {
     const autenticado = servicoAutenticacao.estaAutenticado();
 
     if (autenticado) {
-      navigate('/listagem');
+      const perfil = servicoAutenticacao.getUsuarioPerfil();
+      if (perfil === 'Enfermeiro') {
+        navigate('/listagem');
+      } else {
+        navigate('/agendamento');
+      }
     }
-  }, []);
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,8 +37,15 @@ export const Auth: React.FC = () => {
         await servicoAutenticacao.login(email, senha);
       } else {
         await servicoAutenticacao.registrar(email, senha);
+        await servicoAutenticacao.login(email, senha);
       }
-      navigate('/agendamento');
+
+      const perfil = servicoAutenticacao.getUsuarioPerfil();
+      if (perfil === 'Enfermeiro') {
+        navigate('/listagem');
+      } else {
+        navigate('/agendamento');
+      }
     } catch (err: any) {
       setErro(err.message || 'Ocorreu um erro.');
     } finally {

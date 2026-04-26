@@ -3,10 +3,12 @@ import { FormularioAgendamento } from './components/formularioAgendamento';
 import { ListagemAgendamentos } from './components/listagemAgendamentos';
 import { Auth } from './components/Auth';
 import { AuthGuard } from './components/AuthGuard';
+import { Header } from './components/Header';
 
 function App() {
   return (
     <BrowserRouter>
+      <Header />
       <main className="w-full min-h-screen bg-[#f1f5f9]">
         <Routes>
           <Route
@@ -47,7 +49,7 @@ function App() {
             />
           </Route>
 
-          <Route path="*" element={<Navigate to="/auth" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </BrowserRouter>

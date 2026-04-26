@@ -16,19 +16,19 @@ interface FormularioProps {
 
 export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const idAgendamento = id ? parseInt(id) : undefined;
+  const { id: agendamentoId } = useParams<{ id: string }>();
+  const isEditing = !!agendamentoId;
 
   const {
     formData,
-    setFormData,
     isLoading,
     handleChange,
     handleDateChange,
     handleTimeChange,
-    handleSubmit
+    handleSubmit,
+    carregarDadosAgendamento
   } = useAgendamento({
-    idAgendamento,
+    agendamentoId,
     onSuccess: (data) => {
       if (onSuccess) onSuccess(data);
       navigate('/listagem');
@@ -36,27 +36,10 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
   });
 
   useEffect(() => {
-    if (idAgendamento) {
-      const carregarAgendamento = async () => {
-        try {
-          const response = await getAgendamento(idAgendamento);
-          const data = response.data;
-
-          setFormData({
-            nomeCompleto: data.nomePaciente,
-            dataNascimento: data.dataNascimento ? parseISO(data.dataNascimento.split('T')[0]) : null,
-            dataAgendamento: data.dataAgendamento ? parseISO(data.dataAgendamento.split('T')[0]) : null,
-            horaAgendamento: data.horaAgendamento ? data.horaAgendamento.substring(0, 5) : '',
-          });
-        } catch (error) {
-          console.error("Erro ao carregar agendamento para edição:", error);
-          alert("Não foi possível carregar os dados do agendamento.");
-          navigate('/listagem');
-        }
-      };
-      carregarAgendamento();
+    if (agendamentoId) {
+      carregarDadosAgendamento(agendamentoId);
     }
-  }, [idAgendamento, setFormData, navigate]);
+  }, [agendamentoId, carregarDadosAgendamento]);
 
   const horarioSelecionado = useMemo(() => {
     if (!formData.horaAgendamento) return null;
@@ -95,8 +78,12 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
         <div className="bg-sky-100 p-3 rounded-full mb-4">
           <Syringe className="text-[#0284c7] w-6 h-6" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-800 mb-1">Cronograma de vacinação</h1>
-        <p className="text-sm font-medium text-slate-400">Sistema de agendamento de COVID-19</p>
+        <h1 className="text-2xl font-bold text-slate-800 mb-1">
+          {isEditing ? 'Alterar agendamento' : 'Cronograma de vacinação'}
+        </h1>
+        <p className="text-sm font-medium text-slate-400">
+          {isEditing ? 'Atualize os dados da sua consulta' : 'Sistema de agendamento de COVID-19'}
+        </p>
       </div>
 
       <hr className="border-slate-100 mb-6" />
@@ -109,6 +96,7 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
           value={formData.nomeCompleto}
           onChange={handleChange}
           required={!nomeValido}
+          disabled={isEditing}
         />
 
         <DatePicker
@@ -117,6 +105,7 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
           onChange={(date) => handleDateChange('dataNascimento', date)}
           maxDate={new Date()}
           required={!dataNascimentoValida}
+          disabled={isEditing}
         />
 
         <div className="flex flex-row gap-4">
@@ -144,10 +133,10 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                {idAgendamento ? 'Salvando...' : 'Agendando...'}
+                {isEditing ? 'Salvando...' : 'Agendando...'}
               </span>
             ) : (
-              idAgendamento ? 'Salvar alterações' : 'Confirmar agendamento'
+              isEditing ? 'Salvar alterações' : 'Confirmar agendamento'
             )}
           </Button>
         </div>

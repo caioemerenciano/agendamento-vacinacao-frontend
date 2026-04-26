@@ -76,5 +76,32 @@ export const servicoAutenticacao = {
             servicoAutenticacao.logout();
             return false;
         }
+    },
+
+    getUsuarioId: (): number | null => {
+        const userJson = localStorage.getItem('user');
+        if (userJson) {
+            try {
+                const user = JSON.parse(userJson);
+                // O backend agora retorna 'Id' ou 'id' no LoginResponse record
+                return user.Id || user.id || null;
+            } catch (e) {
+                console.error('Erro ao ler ID do usuário do storage:', e);
+            }
+        }
+        return null;
+    },
+
+    getUsuarioPerfil: (): string | null => {
+        const userJson = localStorage.getItem('user');
+        if (userJson) {
+            try {
+                const user = JSON.parse(userJson);
+                return user.Perfil || user.perfil || null;
+            } catch (e) {
+                console.error('Erro ao ler Perfil do usuário do storage:', e);
+            }
+        }
+        return null;
     }
 };
