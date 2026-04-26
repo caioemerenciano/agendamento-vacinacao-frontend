@@ -10,7 +10,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, icon, className = '', ...props }, ref) => {
     return (
       <div className={`flex flex-col gap-1 w-full text-left ${className}`}>
-        <label className="text-sm font-semibold text-slate-800">{label}</label>
+        <label className="text-sm font-semibold text-slate-800">
+          {label} {props.required && <span className="text-red-500">*</span>}
+        </label>
         <div className="relative mt-1">
           <input
             ref={ref}

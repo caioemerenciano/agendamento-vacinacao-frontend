@@ -8,6 +8,7 @@ interface TimePickerProps {
   className?: string;
   minTime?: Date;
   maxTime?: Date;
+  required?: boolean;
 }
 
 export const TimePicker: React.FC<TimePickerProps> = ({
@@ -17,10 +18,13 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   className = '',
   minTime,
   maxTime,
+  required,
 }) => {
   return (
     <div className={`flex flex-col gap-1 w-full text-left ${className}`}>
-      <label className="text-sm font-semibold text-slate-800">{label}</label>
+      <label className="text-sm font-semibold text-slate-800">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
       <div className="relative mt-1">
         <ReactDatePicker
           selected={selected}
