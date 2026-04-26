@@ -3,41 +3,41 @@ import { Shield, EyeOff, Eye, Loader2 } from 'lucide-react';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { servicoAutenticacao } from '../services/authService';
 
 export const Auth: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [abaAtiva, setAbaAtiva] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    const isAuthenticated = authService.isAuthenticated();
+    const autenticado = servicoAutenticacao.estaAutenticado();
 
-    if (isAuthenticated) {
+    if (autenticado) {
       navigate('/listagem');
     }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    setErro('');
+    setCarregando(true);
 
     try {
-      if (activeTab === 'login') {
-        await authService.login(email, senha);
+      if (abaAtiva === 'login') {
+        await servicoAutenticacao.login(email, senha);
       } else {
-        await authService.registrar(email, senha);
+        await servicoAutenticacao.registrar(email, senha);
       }
       navigate('/agendamento');
     } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro.');
+      setErro(err.message || 'Ocorreu um erro.');
     } finally {
-      setIsLoading(false);
+      setCarregando(false);
     }
   };
 
@@ -57,23 +57,23 @@ export const Auth: React.FC = () => {
       <div className="w-full bg-slate-50 p-1 rounded-xl flex mb-6">
         <button
           type="button"
-          className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'login'
+          className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${abaAtiva === 'login'
             ? 'bg-white text-slate-900 shadow-sm border border-slate-100'
             : 'text-slate-500 hover:text-slate-700'
             }`}
-          onClick={() => setActiveTab('login')}
+          onClick={() => setAbaAtiva('login')}
         >
           Login
         </button>
         <button
           type="button"
-          className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'register'
+          className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${abaAtiva === 'register'
             ? 'bg-white text-slate-900 shadow-sm border border-slate-100'
             : 'text-slate-500 hover:text-slate-700'
             }`}
-          onClick={() => setActiveTab('register')}
+          onClick={() => setAbaAtiva('register')}
         >
-          Register
+          Cadastro
         </button>
       </div>
 
@@ -89,7 +89,7 @@ export const Auth: React.FC = () => {
 
         <Input
           label="Senha"
-          type={showPassword ? 'text' : 'password'}
+          type={mostrarSenha ? 'text' : 'password'}
           placeholder="••••••••••••"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
@@ -97,10 +97,10 @@ export const Auth: React.FC = () => {
           icon={
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={() => setMostrarSenha(!mostrarSenha)}
               className="focus:outline-none pointer-events-auto"
             >
-              {showPassword ? (
+              {mostrarSenha ? (
                 <Eye className="w-[18px] h-[18px] text-slate-400 hover:text-slate-600 transition-colors" />
               ) : (
                 <EyeOff className="w-[18px] h-[18px] text-slate-400 hover:text-slate-600 transition-colors" />
@@ -109,16 +109,16 @@ export const Auth: React.FC = () => {
           }
         />
 
-        {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
+        {erro && <p className="text-red-500 text-sm font-medium">{erro}</p>}
 
         <div className="mt-2">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
+          <Button type="submit" disabled={carregando}>
+            {carregando ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Carregando...
               </span>
-            ) : activeTab === 'login' ? (
+            ) : abaAtiva === 'login' ? (
               'Entrar'
             ) : (
               'Cadastrar'

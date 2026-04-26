@@ -5,7 +5,7 @@ export interface User {
     senha?: string;
 }
 
-export const authService = {
+export const servicoAutenticacao = {
     registrar: async (email: string, senha: string) => {
         const response = await api.post('/auth/registrar', { email, senha });
         return response.data;
@@ -28,7 +28,6 @@ export const authService = {
         if (token && typeof token === 'string') {
             try {
                 localStorage.setItem('token', token);
-                console.log('Token salvo com sucesso no LocalStorage.');
             } catch (error) {
                 console.error('Falha ao salvar o token no LocalStorage (QuotaExceeded ou Modo Privado):', error);
             }
@@ -52,7 +51,30 @@ export const authService = {
         localStorage.removeItem('user');
     },
 
-    isAuthenticated: (): boolean => {
-        return !!localStorage.getItem('token');
+    estaAutenticado: (): boolean => {
+        const token = localStorage.getItem('token');
+        if (!token) return false;
+
+        try {
+            const parts = token.split('.');
+            if (parts.length !== 3) return false;
+
+            const payloadBase64 = parts[1];
+            const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+            const decodedPayload = JSON.parse(atob(base64));
+
+            const now = Math.floor(Date.now() / 1000);
+            if (decodedPayload.exp && decodedPayload.exp < now) {
+                console.warn('Token expirado detectado. Realizando logout automático.');
+                servicoAutenticacao.logout();
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Erro ao validar token JWT:', error);
+            servicoAutenticacao.logout();
+            return false;
+        }
     }
 };

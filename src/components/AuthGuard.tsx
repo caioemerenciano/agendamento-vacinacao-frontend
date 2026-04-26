@@ -1,11 +1,11 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { servicoAutenticacao } from '../services/authService';
 
 export const AuthGuard: React.FC = () => {
-  const isAuthenticated = authService.isAuthenticated();
+  const autenticado = servicoAutenticacao.estaAutenticado();
 
-  if (!isAuthenticated) {
+  if (!autenticado) {
     return <Navigate to="/auth" replace />;
   }
 
