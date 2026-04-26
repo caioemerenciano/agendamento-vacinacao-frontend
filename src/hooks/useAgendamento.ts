@@ -38,8 +38,16 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
-    if (!formData.fullName || !formData.dateOfBirth || !formData.appointmentDate || !formData.time) {
-      alert('Por favor, preencha todos os campos.');
+    const nomeTrimmed = formData.fullName.trim();
+    const partesDoNome = nomeTrimmed.split(/\s+/);
+
+    if (!nomeTrimmed || !formData.dateOfBirth || !formData.appointmentDate || !formData.time) {
+      alert('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    if (partesDoNome.length < 2) {
+      alert('Por favor, digite seu nome completo (nome e sobrenome).');
       return;
     }
 
