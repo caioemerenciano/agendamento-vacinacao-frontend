@@ -5,6 +5,7 @@ import type { AgendamentoFormData, AgendamentoResponse } from '../types/agendame
 import { isAxiosError } from 'axios';
 
 interface UseAgendamentoOptions {
+  idAgendamento?: number;
   onSuccess?: (data: AgendamentoResponse) => void;
   agendamentoId?: string | number;
 }
@@ -14,7 +15,7 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
     nomeCompleto: '',
     dataNascimento: null,
     dataAgendamento: null,
-    horario: '',
+    horaAgendamento: '',
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +30,7 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
         nomeCompleto: data.nomePaciente,
         dataNascimento: parseISO(data.dataNascimento || new Date().toISOString()),
         dataAgendamento: parseISO(data.dataAgendamento),
-        horario: data.horaAgendamento.split(':').slice(0, 2).join(':'),
+        horaAgendamento: data.horaAgendamento.split(':').slice(0, 2).join(':'),
       });
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -56,9 +57,9 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
       const snappedDate = new Date(date);
       snappedDate.setMinutes(0);
       snappedDate.setSeconds(0);
-      setFormData((prev) => ({ ...prev, horario: format(snappedDate, 'HH:mm') }));
+      setFormData((prev) => ({ ...prev, horaAgendamento: format(snappedDate, 'HH:mm') }));
     } else {
-      setFormData((prev) => ({ ...prev, horario: '' }));
+      setFormData((prev) => ({ ...prev, horaAgendamento: '' }));
     }
   };
 
@@ -68,7 +69,7 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
     const nomeTrimmed = formData.nomeCompleto.trim();
     const partesDoNome = nomeTrimmed.split(/\s+/);
 
-    if (!nomeTrimmed || !formData.dataNascimento || !formData.dataAgendamento || !formData.horario) {
+    if (!nomeTrimmed || !formData.dataNascimento || !formData.dataAgendamento || !formData.horaAgendamento) {
       alert('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
@@ -85,7 +86,7 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
         nome: formData.nomeCompleto,
         dataNascimento: format(formData.dataNascimento, 'yyyy-MM-dd'),
         dataAgendamento: format(formData.dataAgendamento, 'yyyy-MM-dd'),
-        horaAgendamento: `${formData.horario}:00`,
+        horaAgendamento: `${formData.horaAgendamento}:00`,
       };
 
       console.log('Enviando payload para a API:', payloadParaAPI);
@@ -111,7 +112,7 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
           nomeCompleto: '',
           dataNascimento: null,
           dataAgendamento: null,
-          horario: '',
+          horaAgendamento: '',
         });
       }
 
@@ -161,6 +162,7 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
 
   return {
     formData,
+    setFormData,
     isLoading,
     handleChange,
     handleDateChange,

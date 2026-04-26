@@ -6,7 +6,8 @@ import { DatePicker } from './ui/DatePicker';
 import { TimePicker } from './ui/TimePicker';
 import { Button } from './ui/Button';
 import { Syringe, ShieldCheck, Loader2 } from 'lucide-react';
-import { parse, isToday, setHours, setMinutes } from 'date-fns';
+import { parse, isToday, setHours, setMinutes, parseISO } from 'date-fns';
+import { getAgendamento } from '../services/formularioAgendamentoService';
 import type { AgendamentoResponse } from '../types/agendamento';
 
 interface FormularioProps {
@@ -15,19 +16,19 @@ interface FormularioProps {
 
 export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEditing = !!id;
+  const { id: agendamentoId } = useParams<{ id: string }>();
+  const isEditing = !!agendamentoId;
 
-  const { 
-    formData, 
-    isLoading, 
-    handleChange, 
-    handleDateChange, 
-    handleTimeChange, 
+  const {
+    formData,
+    isLoading,
+    handleChange,
+    handleDateChange,
+    handleTimeChange,
     handleSubmit,
-    carregarDadosAgendamento 
+    carregarDadosAgendamento
   } = useAgendamento({
-    agendamentoId: id,
+    agendamentoId,
     onSuccess: (data) => {
       if (onSuccess) onSuccess(data);
       navigate('/listagem');
@@ -35,15 +36,15 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
   });
 
   useEffect(() => {
-    if (id) {
-      carregarDadosAgendamento(id);
+    if (agendamentoId) {
+      carregarDadosAgendamento(agendamentoId);
     }
-  }, [id, carregarDadosAgendamento]);
+  }, [agendamentoId, carregarDadosAgendamento]);
 
   const horarioSelecionado = useMemo(() => {
-    if (!formData.horario) return null;
-    return parse(formData.horario, 'HH:mm', new Date());
-  }, [formData.horario]);
+    if (!formData.horaAgendamento) return null;
+    return parse(formData.horaAgendamento, 'HH:mm', new Date());
+  }, [formData.horaAgendamento]);
 
   const agendamentoHoje = formData.dataAgendamento
     ? isToday(formData.dataAgendamento)
@@ -69,7 +70,7 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
 
   const dataNascimentoValida = !!formData.dataNascimento;
   const dataAgendamentoValida = !!formData.dataAgendamento;
-  const horarioValido = !!formData.horario;
+  const horarioValido = !!formData.horaAgendamento;
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-100 px-8 py-10 w-full max-w-md mx-auto">
