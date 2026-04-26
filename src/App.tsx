@@ -1,13 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { FormularioAgendamento } from './components/formularioAgendamento';
+import { FormularioAgendamento } from './components/FormularioAgendamento';
 import { ListagemAgendamentos } from './components/listagemAgendamentos';
 import { Auth } from './components/Auth';
 import { AuthGuard } from './components/AuthGuard';
 import { Header } from './components/Header';
+import { ModalProvider } from './context/ModalContext';
 
 function App() {
   return (
-    <BrowserRouter>
+    <ModalProvider>
+      <BrowserRouter>
       <Header />
       <main className="w-full min-h-screen bg-[#f1f5f9]">
         <Routes>
@@ -52,7 +54,8 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ModalProvider>
   );
 }
 

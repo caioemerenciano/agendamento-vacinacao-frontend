@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Pencil, XCircle, CheckCircle } from 'lucide-react';
+import { modalService } from '../services/modalService';
 import { format, parseISO } from 'date-fns';
 import { getAgendamentos } from '../services/listagemAgendamentoService';
 import { patchCancelarAgendamento, patchRealizarAgendamento } from '../services/formularioAgendamentoService';
@@ -16,49 +17,56 @@ export const ListagemAgendamentos = () => {
   const currentRole = servicoAutenticacao.getUsuarioPerfil();
   const eEnfermeiro = currentRole === 'Enfermeiro';
 
-  useEffect(() => {
-    const carregarDados = async () => {
-      try {
-        setLoading(true);
-        const dados = await getAgendamentos();
-        setAppointments(dados);
-      } catch (err) {
-        console.error("Erro ao buscar agendamentos:", err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    carregarDados();
-  }, []);
-
-  const handleCancelar = async (id: number) => {
-    if (!window.confirm("Deseja realmente cancelar este agendamento?")) return;
-
+  const fetchAgendamentos = async () => {
     try {
-      await patchCancelarAgendamento(id);
-      setAppointments(prev => prev.map(app =>
-        app.id === id ? { ...app, status: 3 } : app
-      ));
-    } catch (error: any) {
-      console.error("Erro ao cancelar:", error);
-      alert(error.response?.data?.mensagem || "Erro ao cancelar agendamento.");
+      setLoading(true);
+      const dados = await getAgendamentos();
+      setAppointments(dados);
+      setError(false);
+    } catch (err) {
+      console.error("Erro ao buscar agendamentos:", err);
+      setError(true);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleMarcarRealizado = async (id: number) => {
-    if (!window.confirm("Confirmar a realização deste agendamento?")) return;
+  useEffect(() => {
+    fetchAgendamentos();
+  }, []);
 
-    try {
-      await patchRealizarAgendamento(id);
-      setAppointments(prev => prev.map(app =>
-        app.id === id ? { ...app, status: 2 } : app
-      ));
-    } catch (error: any) {
-      console.error("Erro ao marcar como realizado:", error);
-      alert(error.response?.data?.mensagem || "Erro ao atualizar status.");
-    }
+  const handleCancelar = (id: number) => {
+    modalService.showConfirm(
+      "Deseja realmente cancelar este agendamento?",
+      async () => {
+        try {
+          await patchCancelarAgendamento(id);
+          modalService.showSuccess("Agendamento cancelado com sucesso!");
+          fetchAgendamentos();
+        } catch (error: any) {
+          console.error("Erro ao cancelar:", error);
+          modalService.showError(error.response?.data?.mensagem || "Erro ao cancelar agendamento.");
+        }
+      },
+      "Cancelar Agendamento"
+    );
+  };
+
+  const handleMarcarRealizado = (id: number) => {
+    modalService.showConfirm(
+      "Confirmar a realização deste agendamento?",
+      async () => {
+        try {
+          await patchRealizarAgendamento(id);
+          modalService.showSuccess("Agendamento marcado como realizado!");
+          fetchAgendamentos();
+        } catch (error: any) {
+          console.error("Erro ao realizar:", error);
+          modalService.showError("Erro ao registrar realização do agendamento.");
+        }
+      },
+      "Confirmar Realização"
+    );
   };
 
   const getStatusText = (status: number | string) => {
@@ -173,13 +181,16 @@ export const ListagemAgendamentos = () => {
                             className="w-5 h-5 text-blue-500 hover:text-blue-700 cursor-pointer transition-colors"
                             onClick={() => navigate(`/agendamento/editar/${app.id}`)}
                           />
-                          <XCircle
-                            className="w-5 h-5 text-red-500 hover:text-red-700 cursor-pointer transition-colors"
+                          <button
                             onClick={() => handleCancelar(app.id)}
-                          />
+                            className="hover:scale-110 transition-transform"
+                            title="Cancelar Agendamento"
+                          >
+                            <XCircle className="w-5 h-5 text-red-500 hover:text-red-700" />
+                          </button>
                         </>
                       )}
-                      
+
                       {mostrarAcaoRealizado && (
                         <CheckCircle
                           className="w-5 h-5 text-green-500 hover:text-green-700 cursor-pointer transition-colors"
@@ -200,4 +211,4 @@ export const ListagemAgendamentos = () => {
       </table>
     </div>
   );
-};
+};

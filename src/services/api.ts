@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { modalService } from './modalService';
 
 export const api = axios.create({
     baseURL: 'http://localhost:5056/api',
@@ -24,7 +25,7 @@ api.interceptors.response.use(
     (error) => {
         if (error.response && error.response.status === 401) {
             localStorage.removeItem('token');
-            alert('Sua sessão expirou. Por favor, faça login novamente para continuar.');
+            modalService.showError('Sua sessão expirou. Por favor, faça login novamente para continuar.', 'Sessão Expirada');
             window.location.href = '/';
         }
         return Promise.reject(error);

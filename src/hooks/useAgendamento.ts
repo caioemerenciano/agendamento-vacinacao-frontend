@@ -3,6 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { postAgendamento, getAgendamentoPorId, putAgendamento } from '../services/formularioAgendamentoService';
 import type { AgendamentoFormData, AgendamentoResponse } from '../types/agendamento';
 import { isAxiosError } from 'axios';
+import { modalService } from '../services/modalService';
 
 interface UseAgendamentoOptions {
   idAgendamento?: number;
@@ -13,8 +14,8 @@ interface UseAgendamentoOptions {
 export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptions = {}) => {
   const [formData, setFormData] = useState<AgendamentoFormData>({
     nomeCompleto: '',
-    dataNascimento: null,
-    dataAgendamento: null,
+    dataNascimento: '',
+    dataAgendamento: '',
     horaAgendamento: '',
   });
 
@@ -28,13 +29,13 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
       
       setFormData({
         nomeCompleto: data.nomePaciente,
-        dataNascimento: parseISO(data.dataNascimento || new Date().toISOString()),
-        dataAgendamento: parseISO(data.dataAgendamento),
+        dataNascimento: data.dataNascimento ? format(parseISO(data.dataNascimento), 'dd/MM/yyyy') : '',
+        dataAgendamento: data.dataAgendamento ? format(parseISO(data.dataAgendamento), 'dd/MM/yyyy') : '',
         horaAgendamento: data.horaAgendamento.split(':').slice(0, 2).join(':'),
       });
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
-      alert('Não foi possível carregar os dados do agendamento.');
+      modalService.showError('Não foi possível carregar os dados do agendamento.');
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +50,8 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
     if (name === 'dataNascimento' && date && date > new Date()) {
       return;
     }
-    setFormData((prev) => ({ ...prev, [name]: date }));
+    const dateString = date ? format(date, 'dd/MM/yyyy') : '';
+    setFormData((prev) => ({ ...prev, [name]: dateString }));
   };
 
   const handleTimeChange = (date: Date | null) => {
@@ -70,22 +72,27 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
     const partesDoNome = nomeTrimmed.split(/\s+/);
 
     if (!nomeTrimmed || !formData.dataNascimento || !formData.dataAgendamento || !formData.horaAgendamento) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+      modalService.showError('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
     if (partesDoNome.length < 2) {
-      alert('Por favor, digite seu nome completo (nome e sobrenome).');
+      modalService.showError('Por favor, digite seu nome completo (nome e sobrenome).');
       return;
     }
 
     try {
       setIsLoading(true);
 
+      const parseDate = (dStr: string) => {
+        const [d, m, y] = dStr.split('/');
+        return `${y}-${m}-${d}`;
+      };
+
       const payloadParaAPI = {
         nome: formData.nomeCompleto,
-        dataNascimento: format(formData.dataNascimento, 'yyyy-MM-dd'),
-        dataAgendamento: format(formData.dataAgendamento, 'yyyy-MM-dd'),
+        dataNascimento: parseDate(formData.dataNascimento),
+        dataAgendamento: parseDate(formData.dataAgendamento),
         horaAgendamento: `${formData.horaAgendamento}:00`,
       };
 
@@ -97,7 +104,7 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
           dataAgendamento: payloadParaAPI.dataAgendamento,
           horaAgendamento: payloadParaAPI.horaAgendamento
         });
-        alert('Agendamento atualizado com sucesso!');
+        modalService.showSuccess('Agendamento atualizado com sucesso!');
       } else {
         response = await postAgendamento(payloadParaAPI);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -110,8 +117,8 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
       if (!agendamentoId) {
         setFormData({
           nomeCompleto: '',
-          dataNascimento: null,
-          dataAgendamento: null,
+          dataNascimento: '',
+          dataAgendamento: '',
           horaAgendamento: '',
         });
       }
@@ -125,34 +132,34 @@ export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptio
         if (typeof respostaDaApi === 'string' && respostaDaApi.includes('Exception:')) {
           const primeiraLinha = respostaDaApi.split('\n')[0];
           const mensagemLimpa = primeiraLinha.split('Exception:')[1]?.trim() || 'Erro de regra de negócio no servidor.';
-          alert(`Atenção: ${mensagemLimpa}`);
+          modalService.showError(`Atenção: ${mensagemLimpa}`);
         }
         else if (Array.isArray(respostaDaApi) && respostaDaApi.length > 0) {
           const errosTexto = respostaDaApi.map((e: any) => e.errorMessage || e.ErrorMessage || 'Dado inválido.').join('\n');
-          alert(`Atenção:\n${errosTexto}`);
+          modalService.showError(`Atenção:\n${errosTexto}`);
         }
         else if (respostaDaApi.mensagem) {
-          alert(`Atenção: ${respostaDaApi.mensagem}`);
+          modalService.showError(`Atenção: ${respostaDaApi.mensagem}`);
         }
         else if (respostaDaApi.errors) {
           const listaDeErros = Object.values(respostaDaApi.errors).flat();
           if (listaDeErros.length > 0) {
-            alert(`Atenção: ${String(listaDeErros[0])}`);
+            modalService.showError(String(listaDeErros[0]));
           } else {
-            alert('Verifique se todos os campos foram preenchidos corretamente.');
+            modalService.showError('Verifique se todos os campos foram preenchidos corretamente.');
           }
         }
         else if (respostaDaApi.title) {
-          alert(`Atenção: ${respostaDaApi.title}`);
+          modalService.showError(`Atenção: ${respostaDaApi.title}`);
         }
         else if (error.response.status === 403) {
-          alert('Você não tem permissão para realizar esta ação.');
+          modalService.showError('Você não tem permissão para realizar esta ação.');
         }
         else {
-          alert('Dados inválidos. Não foi possível realizar a operação.');
+          modalService.showError('Dados inválidos. Não foi possível realizar a operação.');
         }
       } else {
-        alert('Ocorreu um erro de conexão com o servidor. Tente novamente mais tarde.');
+        modalService.showError('Ocorreu um erro de conexão com o servidor. Tente novamente mais tarde.');
       }
 
     } finally {

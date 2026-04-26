@@ -4,6 +4,7 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { servicoAutenticacao } from '../services/authService';
+import { modalService } from '../services/modalService';
 
 export const Auth: React.FC = () => {
   const [abaAtiva, setAbaAtiva] = useState<'login' | 'register'>('login');
@@ -37,6 +38,7 @@ export const Auth: React.FC = () => {
         await servicoAutenticacao.login(email, senha);
       } else {
         await servicoAutenticacao.registrar(email, senha);
+        modalService.showSuccess('Sua conta foi criada com sucesso! Realizando login automático...');
         await servicoAutenticacao.login(email, senha);
       }
 
