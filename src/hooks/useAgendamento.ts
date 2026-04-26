@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { postAgendamento } from '../services/formularioAgendamentoService';
+import { postAgendamento, putAgendamento } from '../services/formularioAgendamentoService';
 import type { AgendamentoFormData, AgendamentoResponse } from '../types/agendamento';
 import { isAxiosError } from 'axios';
 
 interface UseAgendamentoOptions {
+  idAgendamento?: number;
   onSuccess?: (data: AgendamentoResponse) => void;
 }
 
-export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
+export const useAgendamento = ({ onSuccess, idAgendamento }: UseAgendamentoOptions = {}) => {
   const [formData, setFormData] = useState<AgendamentoFormData>({
     nomeCompleto: '',
     dataNascimento: null,
     dataAgendamento: null,
-    horario: '',
+    horaAgendamento: '',
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -35,9 +36,9 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
       const snappedDate = new Date(date);
       snappedDate.setMinutes(0);
       snappedDate.setSeconds(0);
-      setFormData((prev) => ({ ...prev, horario: format(snappedDate, 'HH:mm') }));
+      setFormData((prev) => ({ ...prev, horaAgendamento: format(snappedDate, 'HH:mm') }));
     } else {
-      setFormData((prev) => ({ ...prev, horario: '' }));
+      setFormData((prev) => ({ ...prev, horaAgendamento: '' }));
     }
   };
 
@@ -47,7 +48,7 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
     const nomeTrimmed = formData.nomeCompleto.trim();
     const partesDoNome = nomeTrimmed.split(/\s+/);
 
-    if (!nomeTrimmed || !formData.dataNascimento || !formData.dataAgendamento || !formData.horario) {
+    if (!nomeTrimmed || !formData.dataNascimento || !formData.dataAgendamento || !formData.horaAgendamento) {
       alert('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
@@ -64,12 +65,17 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
         nome: formData.nomeCompleto,
         dataNascimento: format(formData.dataNascimento, 'yyyy-MM-dd'),
         dataAgendamento: format(formData.dataAgendamento, 'yyyy-MM-dd'),
-        horario: `${formData.horario}:00`,
+        horaAgendamento: `${formData.horaAgendamento}:00`,
       };
 
       console.log('Enviando payload para a API:', payloadParaAPI);
 
-      const response = await postAgendamento(payloadParaAPI);
+      let response;
+      if (idAgendamento) {
+        response = await putAgendamento(idAgendamento, payloadParaAPI);
+      } else {
+        response = await postAgendamento(payloadParaAPI);
+      }
 
       await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -79,12 +85,14 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
         onSuccess(response.data);
       }
 
-      setFormData({
-        nomeCompleto: '',
-        dataNascimento: null,
-        dataAgendamento: null,
-        horario: '',
-      });
+      if (!idAgendamento) {
+        setFormData({
+          nomeCompleto: '',
+          dataNascimento: null,
+          dataAgendamento: null,
+          horaAgendamento: '',
+        });
+      }
 
     } catch (error) {
       console.error('Erro ao conectar com a API:', error);
@@ -132,6 +140,7 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
 
   return {
     formData,
+    setFormData,
     isLoading,
     handleChange,
     handleDateChange,
