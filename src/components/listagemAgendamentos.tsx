@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, Pencil, Trash2 } from 'lucide-react';
+import { Bell, Pencil, XCircle } from 'lucide-react';
 import { getAgendamentos, cancelarAgendamento } from '../services/listagemAgendamentoService';
 import type { AgendamentoResponse } from '../types/agendamento';
 
@@ -175,7 +175,7 @@ export const ListagemAgendamentos = () => {
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Cancelar Agendamento"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <XCircle className="w-5 h-5" />
                       </button>
                     ) : (
                       <div className="w-8 h-8" aria-hidden="true" />
