@@ -1,7 +1,7 @@
 export interface AgendamentoFormData {
   nomeCompleto: string;
-  dataNascimento: Date | null;
-  dataAgendamento: Date | null;
+  dataNascimento: string;
+  dataAgendamento: string;
   horaAgendamento: string;
 }
 

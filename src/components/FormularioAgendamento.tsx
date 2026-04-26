@@ -6,8 +6,7 @@ import { DatePicker } from './ui/DatePicker';
 import { TimePicker } from './ui/TimePicker';
 import { Button } from './ui/Button';
 import { Syringe, ShieldCheck, Loader2 } from 'lucide-react';
-import { parse, isToday, setHours, setMinutes, parseISO } from 'date-fns';
-import { getAgendamento } from '../services/formularioAgendamentoService';
+import { parse, isToday, setHours, setMinutes } from 'date-fns';
 import type { AgendamentoResponse } from '../types/agendamento';
 
 interface FormularioProps {
@@ -46,12 +45,17 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
     return parse(formData.horaAgendamento, 'HH:mm', new Date());
   }, [formData.horaAgendamento]);
 
-  const agendamentoHoje = formData.dataAgendamento
-    ? isToday(formData.dataAgendamento)
+  const agendamentoDataObj = useMemo(() => {
+    if (!formData.dataAgendamento) return null;
+    return parse(formData.dataAgendamento, 'dd/MM/yyyy', new Date());
+  }, [formData.dataAgendamento]);
+
+  const agendamentoHoje = agendamentoDataObj
+    ? isToday(agendamentoDataObj)
     : false;
 
   const horarioMinimo = useMemo(() => {
-    const inicio = setHours(setMinutes(new Date(), 0), 8); // 08:00
+    const inicio = setHours(setMinutes(new Date(), 0), 8);
     if (agendamentoHoje) {
       const agora = new Date();
       return agora > inicio ? agora : inicio;
@@ -60,7 +64,7 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
   }, [agendamentoHoje]);
 
   const horarioMaximo = useMemo(() => {
-    return setHours(setMinutes(new Date(), 0), 17); // 17:00
+    return setHours(setMinutes(new Date(), 0), 17);
   }, []);
 
   const nomeValido = useMemo(() => {
@@ -68,8 +72,8 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
     return trimmed.split(/\s+/).length >= 2;
   }, [formData.nomeCompleto]);
 
-  const dataNascimentoValida = !!formData.dataNascimento;
-  const dataAgendamentoValida = !!formData.dataAgendamento;
+  const dataNascimentoValida = !!formData.dataNascimento && formData.dataNascimento.length === 10;
+  const dataAgendamentoValida = !!formData.dataAgendamento && formData.dataAgendamento.length === 10;
   const horarioValido = !!formData.horaAgendamento;
 
   return (

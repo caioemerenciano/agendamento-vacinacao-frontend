@@ -1,12 +1,13 @@
 import React from 'react';
 import ReactDatePicker, { registerLocale } from 'react-datepicker';
 import { ptBR } from 'date-fns/locale/pt-BR';
+import { parse } from 'date-fns';
 
 registerLocale('pt-BR', ptBR);
 
 interface DatePickerProps {
   label: string;
-  selected: Date | null;
+  selected: string | Date | null;
   onChange: (date: Date | null) => void;
   placeholderText?: string;
   className?: string;
@@ -28,12 +29,17 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   disabled,
 }) => {
   const applyDateMask = (value: string) => {
+    if (!value || typeof value !== 'string') return '';
     const digits = value.replace(/\D/g, '').substring(0, 8);
     let masked = digits;
     if (digits.length > 2) masked = `${digits.substring(0, 2)}/${digits.substring(2)}`;
     if (digits.length > 4) masked = `${masked.substring(0, 5)}/${masked.substring(5)}`;
     return masked;
   };
+
+  const parsedSelected = typeof selected === 'string' && selected 
+    ? parse(selected, 'dd/MM/yyyy', new Date()) 
+    : (selected instanceof Date ? selected : null);
 
   return (
     <div className={`flex flex-col gap-1 w-full text-left ${className} ${disabled ? 'opacity-60' : ''}`}>
@@ -42,11 +48,16 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       </label>
       <div className="relative mt-1">
         <ReactDatePicker
-          selected={selected}
-          onChange={onChange}
+          selected={parsedSelected}
+          onChange={(date) => {
+            // Se for um clique no calendário, o ReactDatePicker passa um objeto Date
+            onChange(date);
+          }}
           onChangeRaw={(e) => {
             const el = e.target as HTMLInputElement;
-            if (el) el.value = applyDateMask(el.value);
+            if (el && el.value) {
+              el.value = applyDateMask(el.value);
+            }
           }}
           dateFormat="dd/MM/yyyy"
           locale="pt-BR"
