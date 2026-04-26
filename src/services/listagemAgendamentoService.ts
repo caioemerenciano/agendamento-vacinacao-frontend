@@ -10,3 +10,7 @@ export const updateStatusAgendamento = async (id: number | string, novoStatus: n
     return await api.patch(`/agendamento/${id}/status`, { novoStatus });
 };
 
+export const cancelarAgendamento = async (id: number | string) => {
+    return await api.patch(`/agendamento/${id}/cancelar`);
+};
+

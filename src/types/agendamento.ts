@@ -2,14 +2,14 @@ export interface AgendamentoFormData {
   nomeCompleto: string;
   dataNascimento: Date | null;
   dataAgendamento: Date | null;
-  horario: string;
+  horaAgendamento: string;
 }
 
 export interface AgendamentoPayload {
   nome: string;
   dataNascimento: string;
   dataAgendamento: string;
-  horario: string;
+  horaAgendamento: string;
 }
 
 export interface AgendamentoResponse {

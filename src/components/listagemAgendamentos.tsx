@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Bell } from 'lucide-react';
-import { getAgendamentos, updateStatusAgendamento } from '../services/listagemAgendamentoService';
+import { useEffect, useState, useMemo } from 'react';
+import { format, parseISO } from 'date-fns';
+import { Link, useNavigate } from 'react-router-dom';
+import { Bell, Pencil, XCircle } from 'lucide-react';
+import { getAgendamentos, cancelarAgendamento } from '../services/listagemAgendamentoService';
 import type { AgendamentoResponse } from '../types/agendamento';
 
 export const ListagemAgendamentos = () => {
   const [appointments, setAppointments] = useState<AgendamentoResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -26,22 +28,52 @@ export const ListagemAgendamentos = () => {
     carregarDados();
   }, []);
 
-  const handleStatusChange = async (id: number, novoStatusTexto: string) => {
-    const statusMap: Record<string, number> = {
-      'Agendado': 1,
-      'Realizado': 2,
-      'Cancelado': 3
-    };
+  const sortedAppointments = useMemo(() => {
+    return [...appointments].sort((a, b) => {
+      const statusPriority: Record<string, number> = {
+        '1': 1, 'Agendado': 1,
+        '2': 2, 'Realizado': 2,
+        '3': 3, 'Cancelado': 3
+      };
+
+      const pA = statusPriority[String(a.status)] || 99;
+      const pB = statusPriority[String(b.status)] || 99;
+
+      if (pA !== pB) return pA - pB;
+
+      const dAPart = a.dataAgendamento.split('T')[0];
+      const dBPart = b.dataAgendamento.split('T')[0];
+
+      const dateA = new Date(`${dAPart}T${a.horaAgendamento}`);
+      const dateB = new Date(`${dBPart}T${b.horaAgendamento}`);
+
+      if (pA === 1) {
+        return dateA.getTime() - dateB.getTime();
+      } else {
+        return dateB.getTime() - dateA.getTime();
+      }
+    });
+  }, [appointments]);
+
+  const handleEditar = (id: number) => {
+    navigate(`/agendamento/editar/${id}`);
+  };
+
+  const handleCancelar = async (id: number) => {
+    const confirmou = window.confirm('Tem certeza que deseja cancelar este agendamento?');
+    if (!confirmou) return;
 
     try {
-      await updateStatusAgendamento(id, statusMap[novoStatusTexto]);
+      await cancelarAgendamento(id);
 
       setAppointments(prev => prev.map(app =>
-        app.id === id ? { ...app, status: statusMap[novoStatusTexto] } : app
+        app.id === id ? { ...app, status: 3 } : app
       ));
+
+      alert('Agendamento cancelado com sucesso!');
     } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-      alert("Não foi possível atualizar o status no banco de dados.");
+      console.error("Erro ao cancelar agendamento:", error);
+      alert("Não foi possível cancelar o agendamento. Tente novamente.");
     }
   };
 
@@ -100,15 +132,19 @@ export const ListagemAgendamentos = () => {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {appointments.length === 0 ? (
+          {sortedAppointments.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-6 py-8 text-center text-slate-400">Nenhum agendamento encontrado no banco de dados.</td>
+              <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                Nenhum agendamento encontrado.
+              </td>
             </tr>
           ) : (
-            appointments.map((app) => (
+            sortedAppointments.map((app) => (
               <tr key={app.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4 font-medium text-slate-700">{app.nomePaciente}</td>
-                <td className="px-6 py-4 text-slate-600">{app.dataAgendamento?.split('T')[0]}</td>
+                <td className="px-6 py-4 text-slate-600">
+                  {app.dataAgendamento ? format(parseISO(app.dataAgendamento.split('T')[0]), 'dd/MM/yyyy') : '-'}
+                </td>
                 <td className="px-6 py-4 text-slate-600">
                   {app.horaAgendamento?.split(':').slice(0, 2).join(':')}
                 </td>
@@ -120,15 +156,31 @@ export const ListagemAgendamentos = () => {
                 </td>
 
                 <td className="px-6 py-4 text-center">
-                  <select
-                    value={getStatusText(app.status)}
-                    onChange={(e) => handleStatusChange(app.id, e.target.value)}
-                    className="text-sm font-medium border border-slate-300 rounded-md p-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm"
-                  >
-                    <option value="Agendado">Agendado</option>
-                    <option value="Realizado">Realizado</option>
-                    <option value="Cancelado">Cancelado</option>
-                  </select>
+                  <div className="flex items-center justify-center gap-4">
+                    {getStatusText(app.status) === 'Agendado' ? (
+                      <button
+                        onClick={() => handleEditar(app.id)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Editar Agendamento"
+                      >
+                        <Pencil className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <div className="w-8 h-8" aria-hidden="true" />
+                    )}
+
+                    {getStatusText(app.status) === 'Agendado' ? (
+                      <button
+                        onClick={() => handleCancelar(app.id)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Cancelar Agendamento"
+                      >
+                        <XCircle className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <div className="w-8 h-8" aria-hidden="true" />
+                    )}
+                  </div>
                 </td>
 
               </tr>
