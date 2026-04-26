@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import { format } from 'date-fns';
-import { postAgendamento } from '../services/formularioAgendamentoService';
+import { useState, useCallback } from 'react';
+import { format, parseISO } from 'date-fns';
+import { postAgendamento, getAgendamentoPorId, putAgendamento } from '../services/formularioAgendamentoService';
 import type { AgendamentoFormData, AgendamentoResponse } from '../types/agendamento';
 import { isAxiosError } from 'axios';
 
 interface UseAgendamentoOptions {
   onSuccess?: (data: AgendamentoResponse) => void;
+  agendamentoId?: string | number;
 }
 
-export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
+export const useAgendamento = ({ onSuccess, agendamentoId }: UseAgendamentoOptions = {}) => {
   const [formData, setFormData] = useState<AgendamentoFormData>({
     nomeCompleto: '',
     dataNascimento: null,
@@ -17,6 +18,26 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+
+  const carregarDadosAgendamento = useCallback(async (id: string | number) => {
+    try {
+      setIsLoading(true);
+      const response = await getAgendamentoPorId(id);
+      const data = response.data;
+      
+      setFormData({
+        nomeCompleto: data.nomePaciente,
+        dataNascimento: parseISO(data.dataNascimento || new Date().toISOString()),
+        dataAgendamento: parseISO(data.dataAgendamento),
+        horario: data.horaAgendamento.split(':').slice(0, 2).join(':'),
+      });
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      alert('Não foi possível carregar os dados do agendamento.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -64,35 +85,41 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
         nome: formData.nomeCompleto,
         dataNascimento: format(formData.dataNascimento, 'yyyy-MM-dd'),
         dataAgendamento: format(formData.dataAgendamento, 'yyyy-MM-dd'),
-        horario: `${formData.horario}:00`,
+        horaAgendamento: `${formData.horario}:00`,
       };
 
       console.log('Enviando payload para a API:', payloadParaAPI);
 
-      const response = await postAgendamento(payloadParaAPI);
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      console.log('Resposta do Servidor:', response.data);
+      let response;
+      if (agendamentoId) {
+        response = await putAgendamento(agendamentoId, {
+          dataAgendamento: payloadParaAPI.dataAgendamento,
+          horaAgendamento: payloadParaAPI.horaAgendamento
+        });
+        alert('Agendamento atualizado com sucesso!');
+      } else {
+        response = await postAgendamento(payloadParaAPI);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
 
       if (onSuccess) {
         onSuccess(response.data);
       }
 
-      setFormData({
-        nomeCompleto: '',
-        dataNascimento: null,
-        dataAgendamento: null,
-        horario: '',
-      });
+      if (!agendamentoId) {
+        setFormData({
+          nomeCompleto: '',
+          dataNascimento: null,
+          dataAgendamento: null,
+          horario: '',
+        });
+      }
 
     } catch (error) {
       console.error('Erro ao conectar com a API:', error);
 
       if (isAxiosError(error) && error.response?.data) {
         const respostaDaApi = error.response.data;
-
-        console.log('debug testando:', respostaDaApi);
 
         if (typeof respostaDaApi === 'string' && respostaDaApi.includes('Exception:')) {
           const primeiraLinha = respostaDaApi.split('\n')[0];
@@ -108,7 +135,6 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
         }
         else if (respostaDaApi.errors) {
           const listaDeErros = Object.values(respostaDaApi.errors).flat();
-
           if (listaDeErros.length > 0) {
             alert(`Atenção: ${String(listaDeErros[0])}`);
           } else {
@@ -118,8 +144,11 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
         else if (respostaDaApi.title) {
           alert(`Atenção: ${respostaDaApi.title}`);
         }
+        else if (error.response.status === 403) {
+          alert('Você não tem permissão para realizar esta ação.');
+        }
         else {
-          alert('Dados inválidos. Não foi possível realizar o agendamento.');
+          alert('Dados inválidos. Não foi possível realizar a operação.');
         }
       } else {
         alert('Ocorreu um erro de conexão com o servidor. Tente novamente mais tarde.');
@@ -137,5 +166,6 @@ export const useAgendamento = ({ onSuccess }: UseAgendamentoOptions = {}) => {
     handleDateChange,
     handleTimeChange,
     handleSubmit,
+    carregarDadosAgendamento
   };
 };

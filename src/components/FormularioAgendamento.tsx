@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useAgendamento } from '../hooks/useAgendamento';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Input } from './ui/Input';
 import { DatePicker } from './ui/DatePicker';
 import { TimePicker } from './ui/TimePicker';
@@ -15,13 +15,30 @@ interface FormularioProps {
 
 export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEditing = !!id;
 
-  const { formData, isLoading, handleChange, handleDateChange, handleTimeChange, handleSubmit } = useAgendamento({
+  const { 
+    formData, 
+    isLoading, 
+    handleChange, 
+    handleDateChange, 
+    handleTimeChange, 
+    handleSubmit,
+    carregarDadosAgendamento 
+  } = useAgendamento({
+    agendamentoId: id,
     onSuccess: (data) => {
       if (onSuccess) onSuccess(data);
       navigate('/listagem');
     }
   });
+
+  useEffect(() => {
+    if (id) {
+      carregarDadosAgendamento(id);
+    }
+  }, [id, carregarDadosAgendamento]);
 
   const horarioSelecionado = useMemo(() => {
     if (!formData.horario) return null;
@@ -60,8 +77,12 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
         <div className="bg-sky-100 p-3 rounded-full mb-4">
           <Syringe className="text-[#0284c7] w-6 h-6" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-800 mb-1">Cronograma de vacinação</h1>
-        <p className="text-sm font-medium text-slate-400">Sistema de agendamento de COVID-19</p>
+        <h1 className="text-2xl font-bold text-slate-800 mb-1">
+          {isEditing ? 'Alterar agendamento' : 'Cronograma de vacinação'}
+        </h1>
+        <p className="text-sm font-medium text-slate-400">
+          {isEditing ? 'Atualize os dados da sua consulta' : 'Sistema de agendamento de COVID-19'}
+        </p>
       </div>
 
       <hr className="border-slate-100 mb-6" />
@@ -74,6 +95,7 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
           value={formData.nomeCompleto}
           onChange={handleChange}
           required={!nomeValido}
+          disabled={isEditing}
         />
 
         <DatePicker
@@ -82,6 +104,7 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
           onChange={(date) => handleDateChange('dataNascimento', date)}
           maxDate={new Date()}
           required={!dataNascimentoValida}
+          disabled={isEditing}
         />
 
         <div className="flex flex-row gap-4">
@@ -109,10 +132,10 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Agendando...
+                {isEditing ? 'Salvando...' : 'Agendando...'}
               </span>
             ) : (
-              'Confirmar agendamento'
+              isEditing ? 'Salvar alterações' : 'Confirmar agendamento'
             )}
           </Button>
         </div>
