@@ -16,3 +16,17 @@ api.interceptors.request.use((config) => {
 }, (error) => {
     return Promise.reject(error);
 });
+
+api.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('token');
+            alert('Sua sessão expirou. Por favor, faça login novamente para continuar.');
+            window.location.href = '/';
+        }
+        return Promise.reject(error);
+    }
+);
