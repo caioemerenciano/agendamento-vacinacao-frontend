@@ -29,6 +29,15 @@ function App() {
             />
 
             <Route
+              path="/agendamento/editar/:id"
+              element={
+                <div className="flex items-center justify-center p-4 min-h-screen">
+                  <FormularioAgendamento />
+                </div>
+              }
+            />
+
+            <Route
               path="/listagem"
               element={
                 <div className="w-full flex flex-col items-center min-h-screen relative p-4">
