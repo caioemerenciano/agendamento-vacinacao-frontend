@@ -109,16 +109,16 @@ export const ListagemAgendamentos = () => {
               <tr key={app.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4 font-medium text-slate-700">{app.nomePaciente}</td>
                 <td className="px-6 py-4 text-slate-600">{app.dataAgendamento?.split('T')[0]}</td>
-                <td className="px-6 py-4 text-slate-600">{app.horaAgendamento}</td>
+                <td className="px-6 py-4 text-slate-600">
+                  {app.horaAgendamento?.split(':').slice(0, 2).join(':')}
+                </td>
 
-                {/* Coluna de Status com cor dinâmica */}
                 <td className="px-6 py-4">
                   <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusStyle(app.status)}`}>
                     {getStatusText(app.status)}
                   </span>
                 </td>
 
-                {/* Coluna de Ações com o Select */}
                 <td className="px-6 py-4 text-center">
                   <select
                     value={getStatusText(app.status)}
