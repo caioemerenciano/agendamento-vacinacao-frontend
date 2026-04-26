@@ -14,6 +14,7 @@ export interface AgendamentoPayload {
 
 export interface AgendamentoResponse {
   id: number;
+  idPaciente: number;
   nomePaciente: string;
   dataAgendamento: string;
   horaAgendamento: string;

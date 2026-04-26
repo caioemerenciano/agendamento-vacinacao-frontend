@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Bell } from 'lucide-react';
-import { getAgendamentos, updateStatusAgendamento } from '../services/listagemAgendamentoService';
+import { useEffect, useState, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Bell, Pencil, XCircle, CheckCircle } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { getAgendamentos } from '../services/listagemAgendamentoService';
+import { patchCancelarAgendamento, patchRealizarAgendamento } from '../services/formularioAgendamentoService';
+import { servicoAutenticacao } from '../services/authService';
 import type { AgendamentoResponse } from '../types/agendamento';
 
 export const ListagemAgendamentos = () => {
   const [appointments, setAppointments] = useState<AgendamentoResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const navigate = useNavigate();
+  const currentUserId = servicoAutenticacao.getUsuarioId();
+  const currentRole = servicoAutenticacao.getUsuarioPerfil();
+  const eEnfermeiro = currentRole === 'Enfermeiro';
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -26,22 +33,31 @@ export const ListagemAgendamentos = () => {
     carregarDados();
   }, []);
 
-  const handleStatusChange = async (id: number, novoStatusTexto: string) => {
-    const statusMap: Record<string, number> = {
-      'Agendado': 1,
-      'Realizado': 2,
-      'Cancelado': 3
-    };
+  const handleCancelar = async (id: number) => {
+    if (!window.confirm("Deseja realmente cancelar este agendamento?")) return;
 
     try {
-      await updateStatusAgendamento(id, statusMap[novoStatusTexto]);
-
+      await patchCancelarAgendamento(id);
       setAppointments(prev => prev.map(app =>
-        app.id === id ? { ...app, status: statusMap[novoStatusTexto] } : app
+        app.id === id ? { ...app, status: 3 } : app
       ));
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-      alert("Não foi possível atualizar o status no banco de dados.");
+    } catch (error: any) {
+      console.error("Erro ao cancelar:", error);
+      alert(error.response?.data?.mensagem || "Erro ao cancelar agendamento.");
+    }
+  };
+
+  const handleMarcarRealizado = async (id: number) => {
+    if (!window.confirm("Confirmar a realização deste agendamento?")) return;
+
+    try {
+      await patchRealizarAgendamento(id);
+      setAppointments(prev => prev.map(app =>
+        app.id === id ? { ...app, status: 2 } : app
+      ));
+    } catch (error: any) {
+      console.error("Erro ao marcar como realizado:", error);
+      alert(error.response?.data?.mensagem || "Erro ao atualizar status.");
     }
   };
 
@@ -62,6 +78,27 @@ export const ListagemAgendamentos = () => {
       default: return 'bg-blue-100 text-blue-700';
     }
   };
+
+  const sortedAppointments = useMemo(() => {
+    return [...appointments].sort((a, b) => {
+      const statusA = getStatusText(a.status);
+      const statusB = getStatusText(b.status);
+
+      const priority: Record<string, number> = { 'Agendado': 1, 'Realizado': 2, 'Cancelado': 3 };
+      if (priority[statusA] !== priority[statusB]) {
+        return priority[statusA] - priority[statusB];
+      }
+
+      const dateA = new Date(`${a.dataAgendamento.split('T')[0]}T${a.horaAgendamento}`).getTime();
+      const dateB = new Date(`${b.dataAgendamento.split('T')[0]}T${b.horaAgendamento}`).getTime();
+
+      if (statusA === 'Agendado') {
+        return dateA - dateB;
+      } else {
+        return dateB - dateA;
+      }
+    });
+  }, [appointments]);
 
   if (loading) return <div className="p-8 text-center text-slate-600">Carregando agendamentos do banco...</div>;
 
@@ -100,39 +137,64 @@ export const ListagemAgendamentos = () => {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {appointments.length === 0 ? (
+          {sortedAppointments.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-6 py-8 text-center text-slate-400">Nenhum agendamento encontrado no banco de dados.</td>
+              <td colSpan={5} className="px-6 py-8 text-center text-slate-400">Você ainda não possui agendamentos marcados.</td>
             </tr>
           ) : (
-            appointments.map((app) => (
-              <tr key={app.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 font-medium text-slate-700">{app.nomePaciente}</td>
-                <td className="px-6 py-4 text-slate-600">{app.dataAgendamento?.split('T')[0]}</td>
-                <td className="px-6 py-4 text-slate-600">
-                  {app.horaAgendamento?.split(':').slice(0, 2).join(':')}
-                </td>
+            sortedAppointments.map((app) => {
+              const statusTexto = getStatusText(app.status);
+              const podeEditar = statusTexto === 'Agendado';
+              const eDono = app.idPaciente === currentUserId;
+              const mostrarAcoesBasicas = podeEditar && (eDono || eEnfermeiro);
+              const mostrarAcaoRealizado = eEnfermeiro && podeEditar;
 
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusStyle(app.status)}`}>
-                    {getStatusText(app.status)}
-                  </span>
-                </td>
+              return (
+                <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-slate-700">{app.nomePaciente}</td>
+                  <td className="px-6 py-4 text-slate-600">
+                    {format(parseISO(app.dataAgendamento), 'dd/MM/yyyy')}
+                  </td>
+                  <td className="px-6 py-4 text-slate-600">
+                    {app.horaAgendamento?.split(':').slice(0, 2).join(':')}
+                  </td>
 
-                <td className="px-6 py-4 text-center">
-                  <select
-                    value={getStatusText(app.status)}
-                    onChange={(e) => handleStatusChange(app.id, e.target.value)}
-                    className="text-sm font-medium border border-slate-300 rounded-md p-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm"
-                  >
-                    <option value="Agendado">Agendado</option>
-                    <option value="Realizado">Realizado</option>
-                    <option value="Cancelado">Cancelado</option>
-                  </select>
-                </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusStyle(app.status)}`}>
+                      {statusTexto}
+                    </span>
+                  </td>
 
-              </tr>
-            ))
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-4 min-w-[100px]">
+                      {mostrarAcoesBasicas && (
+                        <>
+                          <Pencil
+                            className="w-5 h-5 text-blue-500 hover:text-blue-700 cursor-pointer transition-colors"
+                            onClick={() => navigate(`/agendamento/editar/${app.id}`)}
+                          />
+                          <XCircle
+                            className="w-5 h-5 text-red-500 hover:text-red-700 cursor-pointer transition-colors"
+                            onClick={() => handleCancelar(app.id)}
+                          />
+                        </>
+                      )}
+                      
+                      {mostrarAcaoRealizado && (
+                        <CheckCircle
+                          className="w-5 h-5 text-green-500 hover:text-green-700 cursor-pointer transition-colors"
+                          onClick={() => handleMarcarRealizado(app.id)}
+                        />
+                      )}
+
+                      {!mostrarAcoesBasicas && !mostrarAcaoRealizado && (
+                        <div className="w-14 h-5" />
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
