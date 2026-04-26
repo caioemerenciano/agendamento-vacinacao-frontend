@@ -1,12 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useAgendamento } from '../hooks/useAgendamento';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Input } from './ui/Input';
 import { DatePicker } from './ui/DatePicker';
 import { TimePicker } from './ui/TimePicker';
 import { Button } from './ui/Button';
 import { Syringe, ShieldCheck, Loader2 } from 'lucide-react';
-import { parse, isToday, setHours, setMinutes } from 'date-fns';
+import { parse, isToday, setHours, setMinutes, parseISO } from 'date-fns';
+import { getAgendamento } from '../services/formularioAgendamentoService';
 import type { AgendamentoResponse } from '../types/agendamento';
 
 interface FormularioProps {
@@ -15,18 +16,52 @@ interface FormularioProps {
 
 export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const idAgendamento = id ? parseInt(id) : undefined;
 
-  const { formData, isLoading, handleChange, handleDateChange, handleTimeChange, handleSubmit } = useAgendamento({
+  const {
+    formData,
+    setFormData,
+    isLoading,
+    handleChange,
+    handleDateChange,
+    handleTimeChange,
+    handleSubmit
+  } = useAgendamento({
+    idAgendamento,
     onSuccess: (data) => {
       if (onSuccess) onSuccess(data);
       navigate('/listagem');
     }
   });
 
+  useEffect(() => {
+    if (idAgendamento) {
+      const carregarAgendamento = async () => {
+        try {
+          const response = await getAgendamento(idAgendamento);
+          const data = response.data;
+
+          setFormData({
+            nomeCompleto: data.nomePaciente,
+            dataNascimento: data.dataNascimento ? parseISO(data.dataNascimento.split('T')[0]) : null,
+            dataAgendamento: data.dataAgendamento ? parseISO(data.dataAgendamento.split('T')[0]) : null,
+            horaAgendamento: data.horaAgendamento ? data.horaAgendamento.substring(0, 5) : '',
+          });
+        } catch (error) {
+          console.error("Erro ao carregar agendamento para edição:", error);
+          alert("Não foi possível carregar os dados do agendamento.");
+          navigate('/listagem');
+        }
+      };
+      carregarAgendamento();
+    }
+  }, [idAgendamento, setFormData, navigate]);
+
   const horarioSelecionado = useMemo(() => {
-    if (!formData.horario) return null;
-    return parse(formData.horario, 'HH:mm', new Date());
-  }, [formData.horario]);
+    if (!formData.horaAgendamento) return null;
+    return parse(formData.horaAgendamento, 'HH:mm', new Date());
+  }, [formData.horaAgendamento]);
 
   const agendamentoHoje = formData.dataAgendamento
     ? isToday(formData.dataAgendamento)
@@ -52,7 +87,7 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
 
   const dataNascimentoValida = !!formData.dataNascimento;
   const dataAgendamentoValida = !!formData.dataAgendamento;
-  const horarioValido = !!formData.horario;
+  const horarioValido = !!formData.horaAgendamento;
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-100 px-8 py-10 w-full max-w-md mx-auto">
@@ -109,10 +144,10 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Agendando...
+                {idAgendamento ? 'Salvando...' : 'Agendando...'}
               </span>
             ) : (
-              'Confirmar agendamento'
+              idAgendamento ? 'Salvar alterações' : 'Confirmar agendamento'
             )}
           </Button>
         </div>
