@@ -24,9 +24,14 @@ api.interceptors.response.use(
     },
     (error) => {
         if (error.response && error.response.status === 401) {
-            localStorage.removeItem('token');
-            modalService.showError('Sua sessão expirou. Por favor, faça login novamente para continuar.', 'Sessão Expirada');
-            window.location.href = '/';
+            // Se for erro de login, não deve deslogar nem disparar o modal global de sessão expirada
+            const isAuthRequest = error.config.url?.includes('/') || error.config.url?.includes('/login');
+
+            if (!isAuthRequest) {
+                localStorage.removeItem('token');
+                modalService.showError('Sua sessão expirou. Por favor, faça login novamente para continuar.', 'Sessão Expirada');
+                window.location.href = '/';
+            }
         }
         return Promise.reject(error);
     }
