@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Shield, EyeOff, Eye, Loader2 } from 'lucide-react';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
@@ -48,8 +49,14 @@ export const Auth: React.FC = () => {
       } else {
         navigate('/agendamento');
       }
-    } catch (err: any) {
-      setErro(err.message || 'Ocorreu um erro.');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        modalService.showError('E-mail e/ou senha incorreta(s).');
+      } else {
+        const mensagemErro = (axios.isAxiosError(err) && err.response?.data?.message) ||
+          (err instanceof Error ? err.message : 'Ocorreu um erro ao tentar conectar. Tente novamente mais tarde.');
+        setErro(mensagemErro);
+      }
     } finally {
       setCarregando(false);
     }
