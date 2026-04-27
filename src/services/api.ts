@@ -5,7 +5,6 @@ export const api = axios.create({
     baseURL: 'http://localhost:5056/api',
 });
 
-
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
 
@@ -24,7 +23,6 @@ api.interceptors.response.use(
     },
     (error) => {
         if (error.response && error.response.status === 401) {
-            // Se for erro de login, não deve deslogar nem disparar o modal global de sessão expirada
             const isAuthRequest = error.config.url?.includes('/') || error.config.url?.includes('/login');
 
             if (!isAuthRequest) {

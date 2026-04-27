@@ -49,11 +49,13 @@ export const Auth: React.FC = () => {
       } else {
         navigate('/agendamento');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         modalService.showError('E-mail e/ou senha incorreta(s).');
       } else {
-        setErro(err.response?.data?.message || err.message || 'Ocorreu um erro ao tentar conectar. Tente novamente mais tarde.');
+        const mensagemErro = (axios.isAxiosError(err) && err.response?.data?.message) ||
+          (err instanceof Error ? err.message : 'Ocorreu um erro ao tentar conectar. Tente novamente mais tarde.');
+        setErro(mensagemErro);
       }
     } finally {
       setCarregando(false);
