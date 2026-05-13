@@ -1,8 +1,11 @@
 import { api } from './api';
 
 export interface User {
+    id: number;
     email: string;
-    senha?: string;
+    nome: string;
+    perfil: string;
+    dataNascimento?: string;
 }
 
 export const servicoAutenticacao = {
@@ -83,7 +86,6 @@ export const servicoAutenticacao = {
         if (userJson) {
             try {
                 const user = JSON.parse(userJson);
-                // O backend agora retorna 'Id' ou 'id' no LoginResponse record
                 return user.Id || user.id || null;
             } catch (e) {
                 console.error('Erro ao ler ID do usuário do storage:', e);
@@ -103,5 +105,21 @@ export const servicoAutenticacao = {
             }
         }
         return null;
+    },
+
+    getUsuarioDados: () => {
+        const userJson = localStorage.getItem('user');
+        if (userJson) {
+            try {
+                const user = JSON.parse(userJson);
+                return {
+                    nome: user.Nome || user.nome || '',
+                    dataNascimento: user.DataNascimento || user.dataNascimento || null
+                };
+            } catch (e) {
+                console.error('Erro ao ler dados do usuário do storage:', e);
+            }
+        }
+        return { nome: '', dataNascimento: null };
     }
 };

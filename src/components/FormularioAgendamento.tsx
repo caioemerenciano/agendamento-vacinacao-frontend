@@ -25,7 +25,8 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
     handleDateChange,
     handleTimeChange,
     handleSubmit,
-    carregarDadosAgendamento
+    carregarDadosAgendamento,
+    isReadOnly
   } = useAgendamento({
     agendamentoId,
     onSuccess: (data) => {
@@ -101,6 +102,7 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
           onChange={handleChange}
           required={!nomeValido}
           disabled={isEditing}
+          readOnly={isReadOnly}
         />
 
         <DatePicker
@@ -110,6 +112,7 @@ export const FormularioAgendamento: React.FC<FormularioProps> = ({ onSuccess }) 
           maxDate={new Date()}
           required={!dataNascimentoValida}
           disabled={isEditing}
+          readOnly={isReadOnly}
         />
 
         <div className="flex flex-row gap-4">
